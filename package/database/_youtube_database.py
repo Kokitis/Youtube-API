@@ -2,11 +2,12 @@ from .._entities import importEntities
 from ..github import DATA_FOLDER
 from .validation import parseEntityArguments, validateEntity
 import pony
-from pprint import pprint
+
+from pprint import pprint	
 import json
 import os 
 import progressbar
-
+#pprint(dir(pony))
 class YouTubeDatabase:
 	def __init__(self, api, filename = None):
 		if filename is None:
@@ -52,6 +53,8 @@ class YouTubeDatabase:
 
 		return response
 	def _getEntityClass(self, kind):
+		if kind.endswith('s'):
+			kind = kind[:-1]
 		if kind == 'channel':
 			return self.Channel 
 		elif kind == 'playlist':
@@ -60,6 +63,9 @@ class YouTubeDatabase:
 			return self.Tag 
 		elif kind == 'video':
 			return self.Video
+		else:
+			message = "'{}' is not a valid entity type!".format(kind)
+			raise ValueError(message)
 	def callApi(self, endpoint, **parameters):
 		return self.api.request(endpoint, **parameters)
 	@pony.orm.db_session

@@ -17,15 +17,16 @@ if __name__ == '__main__':
 	#pprint(youtube.getChannel(subscriptions['RealLifeLore'], True))
 	
 	if True:
-		test_database = YouTubeDatabase(youtube, filename = 'roosterteeth_channels')
-		print("Database Filename: ", test_database.filename)
+		test_database = YouTubeDatabase(youtube, filename = 'youtube_database')
+		#print("Database Filename: ", test_database.filename)
 		#pprint(subscriptions)
 		for key, value in sorted(subscriptions.items()):
 
 			#if key != 'RealLifeLore': continue
-			keys = ['Achievement Hunter', 'Funhaus', 'LetsPlay', 'Rooster Teeth']
+			#keys = ['Achievement Hunter', 'Funhaus', 'LetsPlay', 'Rooster Teeth']
 			#keys = ['RealLifeLore']
-			if key in keys:
+			completed = [i for index, i in enumerate(subscriptions.keys()) if index <55]
+			if key not in completed:
 				test_database.importChannel(value)
 
 
