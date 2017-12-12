@@ -1,5 +1,6 @@
 import requests
 from pprint import pprint
+    
 
 class YouTube:
     endpoints = {
@@ -14,6 +15,7 @@ class YouTube:
 
     def __init__(self, api_key):
         self.api_key = api_key
+        self.attempts = 5
         self.errors = list()
 
     def getChannel(self, key, raw = False):
@@ -23,14 +25,18 @@ class YouTube:
             'part': "snippet,statistics,topicDetails"
         }
         response = self.request('channels', **parameters)
+        if raw:
+            return response
         channel_items = list()
-        if 'items' in response:
+        if isinstance(response, dict) and 'items' in response:
             for item in response['items']:
                 channel_response = self._parseChannelData(item)
                 if channel_response is not None:
                     channel_items.append(channel_response)
+        elif response is None:
+            pass
         else:
-            message = "'items' was not found in the response:"
+            message = "'items' was not found in the response"
             pprint(response)
             raise KeyError(message)
         
@@ -65,22 +71,23 @@ class YouTube:
             'maxResults': '50'
         }
         items = list()
-        index = 0
         while True:
-            index += 1
             response = self.request('search', **parameters)
-            for item in response['items']:
-                item_details = item['id']
-                
-                items.append({
-                    'itemId': item_details[item_details['kind'].split('#')[1] + 'Id'],
-                    'itemKind': item_details['kind']
-                })
+            if response is not None:
+                for item in response['items']:
+                    item_details = item['id']
+                    
+                    items.append({
+                        'itemId': item_details[item_details['kind'].split('#')[1] + 'Id'],
+                        'itemKind': item_details['kind']
+                    })
 
-            if 'nextPageToken' not in response.keys() or len(items) == 0:
-                break 
+                if 'nextPageToken' not in response.keys() or len(items) == 0:
+                    break 
+                else:
+                    parameters['pageToken'] = response['nextPageToken']
             else:
-                parameters['pageToken'] = response['nextPageToken']
+                break
         
         if kind is not None:
             items = [item for item in items if item['kind'] == 'kind']
@@ -98,24 +105,35 @@ class YouTube:
 
         is_valid = response['isValid']
         if is_valid:
-            result = {
-                # snippet
-                'channelName': snippet['title'],
-                'channelId': channel_id,
-                'country': snippet.get('country'),
-                'description': snippet['description'],
-                'creationDate': snippet['publishedAt'],
+            try: 
+                result = {
+                    # snippet
+                    'channelName': snippet['title'],
+                    'channelId': channel_id,
+                    'country': snippet.get('country'),
+                    'description': snippet['description'],
+                    #'creationDate': snippet['publishedAt'],
 
-                # statistics
-                'subscriberCount': statistics['subscriberCount'],
-                'videoCount': statistics['videoCount'],
-                'viewCount': statistics['viewCount'],
+                    # statistics
+                    'subscriberCount': statistics['subscriberCount'],
+                    'videoCount': statistics['videoCount'],
+                    'viewCount': statistics['viewCount'],
 
-                # topics
-                #'topicIds': topic_details['topicIds'],
-                #'topicCategories': topic_details['topicCategories'],
-                'tags': []
-            }
+                    # topics
+                    #'topicIds': topic_details['topicIds'],
+                    #'topicCategories': topic_details['topicCategories'],
+                    'tags': []
+                }
+                if snippet['title'] == 'YouTube Spotlight':
+                    result = None 
+                else:
+                    result['creationDate'] = snippet['publishedAt']
+            except Exception as exception:
+                print("\nSnippet\n")
+                pprint(snippet)
+                print("\nStatistics\n")
+                pprint(statistics)
+                raise exception
         elif ignore_errors:
             result = None 
         else:
@@ -141,12 +159,16 @@ class YouTube:
                 'part': 'snippet'
             }
             response = self.request('playlistItems', **playlist_items_parameters)
-            next_page_token = response.get('nextpageToken')
-            items += response['items']
+            if response is not None:
+                next_page_token = response.get('nextpageToken')
+                items += response['items']
+            else:
+                pass
             if next_page_token is None or len(response['items']) == 0:
                 break
             else:
                 playlist_items_parameters['pageToken'] = next_page_token
+            
         playlist_response = self._parsePlaylistData(playlist_response, items)
         return playlist_response
 
@@ -189,10 +211,13 @@ class YouTube:
         response = self.request('videos', part='snippet,statistics,contentDetails,topicDetails', **parameters)
         
         items = list()
-        for item in response['items']:
-            video_response = self._parseVideoData(item)
-            if video_response is not None:
-                items.append(video_response)
+        if response is not None:
+            for item in response['items']:
+                video_response = self._parseVideoData(item)
+                if video_response is not None:
+                    items.append(video_response)
+        else:
+            response = []
         
         if len(items) == 0:     result = None 
         elif len(items) == 1:   result = items[0]
@@ -294,6 +319,8 @@ class YouTube:
             tags = []
             is_valid  = False
 
+        tags = [str(i).lower() for i in tags]
+
         result = {
             'id': response_id,
             'tags': tags,
@@ -366,8 +393,28 @@ class YouTube:
         if not endpoint.endswith('s'): endpoint += 's'
         base_url = self.endpoints[endpoint]
 
-        response = requests.get(base_url, params=parameters)
-        return response.json()
+        try:
+            response = requests.get(base_url, params=parameters).json()
+        except Exception as exception:
+            print(str(exception))
+            response = {'code': 404}
+
+        error_response = response.get('error')
+        if error_response:
+            
+            error_code = error_response['code']
+            if error_code == 503: # Common backen error
+                response = None 
+            elif error_code == 403:
+                pprint(error_response)
+                message = "Daily Usage limit reached!"
+                raise ValueError(message)
+            else:
+                response = None
+        return response
+
+    def calculateQuotaCost(endpoint, **parameters):
+        pass
 
     def get(self, kind, key):
         if kind == 'channel':
