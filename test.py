@@ -17,9 +17,8 @@ if __name__ == '__main__':
 	#pprint(youtube.getChannel(subscriptions['RealLifeLore'], True))
 	
 	if True:
-		test_database = YouTubeDatabase(youtube, filename = filename)
-
-		
+		test_database = YouTubeDatabase(youtube, filename = 'roosterteeth_channels')
+		print("Database Filename: ", test_database.filename)
 		#pprint(subscriptions)
 		for key, value in sorted(subscriptions.items()):
 

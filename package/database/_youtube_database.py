@@ -1,4 +1,5 @@
 from .._entities import importEntities
+from ..github import DATA_FOLDER
 from .validation import parseEntityArguments, validateEntity
 import pony
 from pprint import pprint
@@ -9,12 +10,19 @@ import progressbar
 class YouTubeDatabase:
 	def __init__(self, api, filename = None):
 		if filename is None:
-			filename = os.path.join(os.path.dirname(__file__), 'youtube_database.sqlite')
+			filename = os.path.join(DATA_FOLDER, 'youtube_database.sqlite')
+		elif os.path.isdir(filename):
+			filename = os.path.join(filename, 'youtube_database.sqlite')
+		elif '\\' not in filename and '/' not in filename:
+			filename = os.path.join(DATA_FOLDER, filename + '.sqlite')
 
 		self.filename = filename 
-		self.error_filename = os.path.join(os.path.dirname(__file__), 'error_log.json')
-		with open(self.error_filename, 'r') as file1:
-			self._error_log = json.loads(file1.read())
+		self.error_filename = os.path.join(DATA_FOLDER, 'error_log.json')
+		if not os.path.exists(self.error_filename):
+			self._error_log = list()
+		else:
+			with open(self.error_filename, 'r') as file1:
+				self._error_log = json.loads(file1.read())
 		self.api = api 
 		self._db = pony.orm.Database()
 		self._db.bind(provider='sqlite', filename=filename, create_db = True)
@@ -169,7 +177,10 @@ class YouTubeDatabase:
 		print("Importing all items for '{}'...".format(channel.name))
 
 		items = self.api.getChannelElements(key)
-
+		metrics = {
+			'found': 0,
+			'failed': 0
+		}
 		progress_bar = progressbar.ProgressBar(max_value = len(items))
 		for index, item in enumerate(items):
 			progress_bar.update(index)
@@ -178,7 +189,13 @@ class YouTubeDatabase:
 			if item_kind == 'youtube#playlist':
 				self._importPlaylist(item_id)
 			elif item_kind == 'youtube#video':
-				self.access('import', 'video', item_id)
+				channel_video = self.access('import', 'video', item_id)
+				if channel_video is not None:
+					metrics['found'] += 1
+				else:
+					metrics['failed'] += 1
+
+		pprint(metrics)
 
 	@pony.orm.db_session
 	def _importPlaylist(self, key):

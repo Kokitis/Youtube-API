@@ -1,0 +1,483 @@
+[
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "1oUB8pxGa6w",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "1oUB8pxGa6w",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "CRWN-o5MWeY",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "CRWN-o5MWeY",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "XRxPzH4SSXs",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "XRxPzH4SSXs",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "UCsB0LwkHPWyjfZ-JwvtwEXw",
+            "kind": "channel",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "UCsB0LwkHPWyjfZ-JwvtwEXw",
+        "itemType": "channel",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "UCboMX_UNgaPBsUOIgasn3-Q",
+            "kind": "channel",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "UCboMX_UNgaPBsUOIgasn3-Q",
+        "itemType": "channel",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "UCkxctb0jr8vwa4Do6c6su0Q",
+            "kind": "channel",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "UCkxctb0jr8vwa4Do6c6su0Q",
+        "itemType": "channel",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "UCzH3iADRIq1IJlIXjfNgTpA",
+            "kind": "channel",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "UCzH3iADRIq1IJlIXjfNgTpA",
+        "itemType": "channel",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "UCsB0LwkHPWyjfZ-JwvtwEXw",
+            "kind": "channel",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "UCsB0LwkHPWyjfZ-JwvtwEXw",
+        "itemType": "channel",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "UCboMX_UNgaPBsUOIgasn3-Q",
+            "kind": "channel",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "UCboMX_UNgaPBsUOIgasn3-Q",
+        "itemType": "channel",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "UCkxctb0jr8vwa4Do6c6su0Q",
+            "kind": "channel",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "UCkxctb0jr8vwa4Do6c6su0Q",
+        "itemType": "channel",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "UCzH3iADRIq1IJlIXjfNgTpA",
+            "kind": "channel",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "UCzH3iADRIq1IJlIXjfNgTpA",
+        "itemType": "channel",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "xZnjyZI_FM4",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "xZnjyZI_FM4",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "ICWpzO94tUE",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "ICWpzO94tUE",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "tmiHt2J57ME",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "tmiHt2J57ME",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "H0y7-N3V9w0",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "H0y7-N3V9w0",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "xZnjyZI_FM4",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "xZnjyZI_FM4",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "tmiHt2J57ME",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "tmiHt2J57ME",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "ICWpzO94tUE",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "ICWpzO94tUE",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "1oUB8pxGa6w",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "1oUB8pxGa6w",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "CRWN-o5MWeY",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "CRWN-o5MWeY",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "XRxPzH4SSXs",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "XRxPzH4SSXs",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "1oUB8pxGa6w",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "1oUB8pxGa6w",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "CRWN-o5MWeY",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "CRWN-o5MWeY",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "XRxPzH4SSXs",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "XRxPzH4SSXs",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "xZnjyZI_FM4",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "xZnjyZI_FM4",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "ICWpzO94tUE",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "ICWpzO94tUE",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "tmiHt2J57ME",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "tmiHt2J57ME",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "H0y7-N3V9w0",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "H0y7-N3V9w0",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "1oUB8pxGa6w",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "1oUB8pxGa6w",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "CRWN-o5MWeY",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "CRWN-o5MWeY",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "XRxPzH4SSXs",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "XRxPzH4SSXs",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "ICWpzO94tUE",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "ICWpzO94tUE",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "tmiHt2J57ME",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "tmiHt2J57ME",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "H0y7-N3V9w0",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "H0y7-N3V9w0",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "xZnjyZI_FM4",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "xZnjyZI_FM4",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "tmiHt2J57ME",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "tmiHt2J57ME",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    },
+    {
+        "apiResponse": null,
+        "inFunction": "YouTubeDatabase.access",
+        "inputParameters": {
+            "key": "ICWpzO94tUE",
+            "kind": "video",
+            "kwargs": {},
+            "method": "import"
+        },
+        "itemId": "ICWpzO94tUE",
+        "itemType": "video",
+        "message": "api returned 'None'"
+    }
+]

@@ -14,6 +14,7 @@ class YouTube:
 
     def __init__(self, api_key):
         self.api_key = api_key
+        self.attempts = 5
         self.errors = list()
 
     def getChannel(self, key, raw = False):
@@ -24,13 +25,15 @@ class YouTube:
         }
         response = self.request('channels', **parameters)
         channel_items = list()
-        if 'items' in response:
+        if isinstance(response, dict) and 'items' in response:
             for item in response['items']:
                 channel_response = self._parseChannelData(item)
                 if channel_response is not None:
                     channel_items.append(channel_response)
+        elif response is None:
+            pass
         else:
-            message = "'items' was not found in the response:"
+            message = "'items' was not found in the response"
             pprint(response)
             raise KeyError(message)
         
@@ -189,10 +192,13 @@ class YouTube:
         response = self.request('videos', part='snippet,statistics,contentDetails,topicDetails', **parameters)
         
         items = list()
-        for item in response['items']:
-            video_response = self._parseVideoData(item)
-            if video_response is not None:
-                items.append(video_response)
+        if response is not None:
+            for item in response['items']:
+                video_response = self._parseVideoData(item)
+                if video_response is not None:
+                    items.append(video_response)
+        else:
+            response = []
         
         if len(items) == 0:     result = None 
         elif len(items) == 1:   result = items[0]
@@ -294,6 +300,8 @@ class YouTube:
             tags = []
             is_valid  = False
 
+        tags = [str(i).lower() for i in tags]
+
         result = {
             'id': response_id,
             'tags': tags,
@@ -366,8 +374,24 @@ class YouTube:
         if not endpoint.endswith('s'): endpoint += 's'
         base_url = self.endpoints[endpoint]
 
-        response = requests.get(base_url, params=parameters)
-        return response.json()
+        try:
+            response = requests.get(base_url, params=parameters).json()
+        except Exception as exception:
+            print(str(exception))
+            response = {'code': 404}
+        response_code = response.get('code', 200)
+        """
+        if response_code == 200:
+            break
+        elif response['code'] == 503: #Retry for these errors.
+            pass 
+        else:
+            pprint(response)
+            raise ValueError("Api returned unsupported response code '{}'!".format(response_code))
+        """
+        if response.get('code') is not None:
+            response = None
+        return response
 
     def get(self, kind, key):
         if kind == 'channel':

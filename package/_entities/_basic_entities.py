@@ -1,12 +1,13 @@
 
 from datetime import timedelta, datetime
+from ._custom_entities import CustomVideo
 from pony.orm import *
 def importEntities(db):
 
 	#db = Database()
 
 
-	class Video(db.Entity):
+	class Video(db.Entity, CustomVideo):
 		entity_type = 'video'
 		id = PrimaryKey(str)
 		name = Required(str)
