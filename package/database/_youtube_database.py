@@ -77,12 +77,14 @@ class YouTubeDatabase:
 			result = None
 
 		if isinstance(key, str):
-			parameters = self.api.get(kind, key)
+			
+			api_response = self.api.get(kind, key)
+			parameters = api_response
 		elif isinstance(key, dict):
 			parameters = key
 		else:
 			parameters = kwargs
-
+		pprint(parameters)
 		if parameters is None:
 			_error_message = {
 				'itemType': kind,
@@ -101,6 +103,7 @@ class YouTubeDatabase:
 			self._addError(_error_message)
 			return None
 		database_parameters = self._cleanArguments(kind, **parameters)
+		pprint(database_parameters)
 		database_parameters = self._addMissingArguments(kind, database_parameters, **parameters)
 		#pprint(database_parameters)
 		if method in ['import', 'insert'] and result is None:
