@@ -116,9 +116,9 @@ def parseEntityArguments(entity_type, entity_args = None, **kwargs):
 		args = {
 			'id': parseKeywords(result, ['videoId', 'id']),
 			'name': parseKeywords(result, ['videoName', 'name', 'title']),
-			'views': parseKeywords(result, ['views', 'viewCount'], int),
-			'likes': parseKeywords(result, ['likes', 'likeCount'], int),
-			'dislikes': parseKeywords(result, ['dislikes', 'dislikeCount'], int),
+			'views': parseKeywords(result, ['views', 'viewCount', 'videoViewCount'], int),
+			'likes': parseKeywords(result, ['likes', 'likeCount', 'videoLikeCount'], int),
+			'dislikes': parseKeywords(result, ['dislikes', 'dislikeCount', 'videoDislikeCount'], int),
 			'publishDate': parseKeywords(result, ['publishDate', 'publishedAt'], timetools.Timestamp),
 			'duration': parseKeywords(result, ['duration', 'length']),
 			#'updatedAt': "",
