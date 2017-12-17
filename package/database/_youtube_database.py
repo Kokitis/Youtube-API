@@ -1,13 +1,15 @@
+import json
+import os
+from pprint import pprint
+
+import pony
+import progressbar
+
 from .._entities import importEntities
 from ..github import DATA_FOLDER
 from .validation import parseEntityArguments, validateEntity
-import pony
 
-from pprint import pprint	
-import json
-import os 
-import progressbar
-#pprint(dir(pony))
+
 class YouTubeDatabase:
 	def __init__(self, api, filename = None):
 		if filename is None:
@@ -52,6 +54,10 @@ class YouTubeDatabase:
 			response = self.access('add', kind, response)
 
 		return response
+	
+	def callApi(self, kind, key):
+		pass
+	
 	def _getEntityClass(self, kind):
 		if kind.endswith('s'):
 			kind = kind[:-1]
@@ -66,8 +72,7 @@ class YouTubeDatabase:
 		else:
 			message = "'{}' is not a valid entity type!".format(kind)
 			raise ValueError(message)
-	def callApi(self, endpoint, **parameters):
-		return self.api.request(endpoint, **parameters)
+
 	@pony.orm.db_session
 	def access(self, method, kind, key = None, **kwargs):
 
@@ -84,7 +89,7 @@ class YouTubeDatabase:
 			parameters = key
 		else:
 			parameters = kwargs
-		pprint(parameters)
+
 		if parameters is None:
 			_error_message = {
 				'itemType': kind,
@@ -103,9 +108,9 @@ class YouTubeDatabase:
 			self._addError(_error_message)
 			return None
 		database_parameters = self._cleanArguments(kind, **parameters)
-		pprint(database_parameters)
+
 		database_parameters = self._addMissingArguments(kind, database_parameters, **parameters)
-		#pprint(database_parameters)
+
 		if method in ['import', 'insert'] and result is None:
 			result = self._insertEntity(kind, **database_parameters)
 
@@ -121,13 +126,14 @@ class YouTubeDatabase:
 			if 'channelId' in parameters:
 				channel_id = parameters['channelId']
 			elif 'channelId' in kwargs:
-				channel_id = kwargs['channelId']
+				channel_id = kwargs.get('channelId')
 			else:
 				if True:
 					pprint(parameters)
 					print("\n")
 					pprint(kwargs)
 				raise KeyError("Could not find the channelId.")
+
 			channel = self('channel', channel_id)
 			tags = [self.access('import', 'tag', tag) for tag in parameters['tags']]
 			parameters['channel'] = channel
@@ -159,22 +165,34 @@ class YouTubeDatabase:
 		if not validateEntity(kind, **parameters):
 			return None
 		try:
-			
 			result = entity_class(**parameters)
 		except Exception as exception:
 			if False:
+				print("Exception: ", str(exception))
 				print("Entity Type: '{}'".format(kind))
 				print("\nRaw Data\n")
 				pprint(kwargs)
 				print("\nClean Data\n")
 				pprint(parameters)
-			#raise exception 
+
 			result = None
 		return result
-	def importVideos(self, elements):
-		""" list of Video ids. """
-		for video_id in elements:
-			self.access('import', 'video', video_id)
+	
+	def _importVideo(self, data, **kwargs):
+		if 'channel' in kwargs:
+			channel = kwargs['channel']
+		else:
+			channel_id = data['channelId']
+			channel = self.get('channel', channel_id)
+		
+		video_entity_parameters = self.convertApiToEntity('video', **data)
+		video_entity_parameters['channel'] = channel
+
+		video_entity = self.access('import', video_entity_parameters)
+
+		return video_entity
+
+
 	@pony.orm.db_session
 	def importChannel(self, key):
 		""" Imports the videos and playlists associated with a given channel.
@@ -185,7 +203,8 @@ class YouTubeDatabase:
 			return None
 		print("Importing all items for '{}'...".format(channel.name))
 
-		items = self.api.getChannelElements(key)
+		items = self.api.getChannelItems(key)
+
 		metrics = {
 			'found': 0,
 			'failed': 0
@@ -193,30 +212,29 @@ class YouTubeDatabase:
 		progress_bar = progressbar.ProgressBar(max_value = len(items))
 		for index, item in enumerate(items):
 			progress_bar.update(index)
-			item_id = item['itemId']
 			item_kind = item['itemKind']
-			if item_kind == 'youtube#playlist':
-				self._importPlaylist(item_id)
-			elif item_kind == 'youtube#video':
-				channel_video = self.access('import', 'video', item_id)
-				if channel_video is not None:
-					metrics['found'] += 1
-				else:
-					metrics['failed'] += 1
+			
+			if item_kind == 'video':
+				self._importVideo(item, channel = channel)
+			elif item_kind == 'playlist':
+				self._importPlaylist(item, channel = channel)
 
 		pprint(metrics)
 
 	@pony.orm.db_session
-	def _importPlaylist(self, key):
+	def _importPlaylist(self, key, **kwargs):
 
 		playlist = self.get('playlist', key)
 		if playlist is not None:
 			return playlist
-
-		playlist_response = self.api.get('playlist', key)
 		
-		playlist_response['channel'] = self.access('import', 'channel', playlist_response['channelId'])
-
+		playlist_response = self.api.get('playlist', key)
+		if 'channel' in kwargs:
+			channel = kwargs['channel']
+		else:
+			channel_id = playlist_response['channelId']
+			channel = self.getChannel(channel_id)
+		playlist_response['channel'] = channel
 		playlist = self.access('import', 'playlist', **playlist_response)
 
 		for item in playlist_response['items']:
@@ -232,6 +250,7 @@ class YouTubeDatabase:
 	def _cleanArguments(kind, **data):
 		return parseEntityArguments(kind, **data)
 
+	
 	@pony.orm.db_session
 	def get(self, kind, key = None, **kwargs):
 		"""
@@ -244,9 +263,11 @@ class YouTubeDatabase:
 				-----------------
 				'id', 'string':  The primary key for an object in the database.
 		"""	
-		if isinstance(key, dict) and ('id' in key or 'string' in key):
+		if isinstance(key, dict) and ('itemId' in key or 'string' in key):
 			kwargs = key
-		kwargs = self._cleanArguments('playlist',**kwargs)
+		
+		kwargs = self._cleanArguments(kind, **kwargs)
+
 		if isinstance(key, str):
 			if kind.startswith('tag'): arg_key = 'string'
 			else: arg_key = 'id'
