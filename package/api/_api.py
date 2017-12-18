@@ -1,6 +1,8 @@
 import requests
 from pprint import pprint
 import datetime
+from ..github import youtube_api_key, timetools
+API_KEY = youtube_api_key
 
 class ApiResponse:
 	endpoints = {
@@ -12,27 +14,23 @@ class ApiResponse:
 		'activities': 'https://www.googleapis.com/youtube/v3/activities',
 		'watch': 'http://www.youtube.com/watch'
 	}
-	api_key = None
 	def __init__(self, endpoint, key, **kwargs):
 		if endpoint.endswith('s'): 
 			endpoint = endpoint[:-1]
-		
 		self.status = None
 		self.error_code = None
 		self.endpoint = endpoint
 
-		self.parameters = self._getParameters(key)
-		self.raw_response = self._request(**kwargs)
+		self.raw_response = self._request(endpoint, key, **kwargs)
 
 		if 'nextPageToken' in self.raw_response:
-			self.raw_response['items'] = self._extractAllPages(**kwargs)
+			self.raw_response['items'] = self._extractAllPages(endpoint, key, **kwargs)
  
 		self.validated_items = list()
-		if self.status and self.endpoint != 'search':
+		if self.status:
 			for item in self.raw_response['items']:
 				self.validated_items.append(self._validateApiResponse(item))
-		elif self.endpoint == 'search':
-			self.validated_items = self.raw_response['items']
+				
 
 	def __iter__(self):
 		for i in self.getItems():
@@ -53,55 +51,67 @@ class ApiResponse:
 		string = "ApiResponse('{}', status = '{}')".format(self.endpoint, self.status)
 		return string
 
-	def getItems(self, function = None):
+	def getItems(self, converter = None):
 		""" if function is a callable object, will return function(item) """
 
 		if self.status and 'items' in self.raw_response:
 			items = self.validated_items
 
-			if function is not None and callable(function):
-				items = [function(i) for i in items]
+			if converter is not None and callable(converter):
+				items = [converter(i) for i in items]
 			items = [i for i in items if i is not None]
 		else:
 			items = []
 
 		return items
 
-	def _getParameters(self, key):
-		if self.endpoint == 'channel':
+	def _getParameters(self, kind = None, request_key = None, provided_parameters = None):
+		if kind is None:
+			kind = self.endpoint
+
+		if request_key is None and kind != 'search':
+			raise ValueError("Request Key = '{}', kind = '{}'".format(request_key, kind))
+		elif kind == 'channel':
 			parameters = {
-				'id': key,
-				'key': self.api_key,
+				'id': request_key,
 				'part': "snippet,statistics,topicDetails"
 			}
-		elif self.endpoint == 'video':
+		elif kind == 'video':
 			parameters = {
-				'id': key,
-				'key': self.api_key,
+				'id': request_key,
 				'part': 'snippet,contentDetails,statistics,topicDetails'
 			}
-		elif self.endpoint == 'playlist':
+		elif kind == 'playlist':
 			parameters =  {
-				'id': key,
+				'id': request_key,
 				'maxResults': '50',
-				'key': self.api_key,
 				'part': "snippet,contentDetails"
 			}
-		elif self.endpoint == 'playlistItems':
+		elif kind == 'playlistItems':
 			parameters = {
-				'key': self.api_key,
-				'playlistId': key,
+				'playlistId': request_key,
 				'maxResults': '50',
 				'part': 'snippet'
 			}
+		elif len(provided_parameters) != 0:
+			parameters = provided_parameters
 		else:
-			raise NotImplementedError
+			print("KIND: ", kind)
+			print("KEY: ", request_key)
+			raise ValueError
 
+		if parameters is None:
+			print("KIND: ", kind)
+			print("Provided Parameters: ")
+			pprint(provided_parameters)
+			raise NotImplementedError
+		parameters['key'] = API_KEY
+		self.parameters = parameters
 		return parameters
 
-	def extractOne(self, function = None):
+	def extractOne(self, converter = None):
 		#items = self.getItems(function)
-		items = self.getItems(function)
+		items = self.getItems(converter)
 
 		if len(items) == 0:     result = None 
 		elif len(items) == 1:   result = items[0]
@@ -109,9 +119,8 @@ class ApiResponse:
 
 		return result
  
-	def toEntity(self):
-
-		response = self.extractOne()
+	def toEntity(self, **kwargs):
+		response = self.toStandard()
 
 		if self.endpoint == 'video':
 			entity = {
@@ -123,7 +132,6 @@ class ApiResponse:
 				'publishDate': 'videoPublishDate',
 				'duration': 'videoDuration',
 				'description': 'videoDescription',
-				'channel': '',
 				'tags': 'videoTags'
 			}
 		elif self.endpoint == 'channel':
@@ -131,28 +139,48 @@ class ApiResponse:
 				'id': 'channelId',
 				'name': 'channelName',
 				'country': 'channelCountry',
-				'creationDate': 'channalCreationDate',
+				'creationDate': 'channelCreationDate',
 				'description': 'channelDescription',
-				'subscriberCount': 'channalSubscriberCount',
+				'subscriberCount': 'channelSubscriberCount',
 				'videoCount': 'channelVideoCount',
-				'viewCount': 'channelVideoCount'
+				'viewCount': 'channelViewCount'
 			}
 		elif self.endpoint == 'playlist':
 			entity = {
 				'id': 'playlistId',
 				'name': 'playlistName',
-				'playlistItems': None,
 				'itemCount': 'playlistItemCount',
 				'description': 'playlistDescription'
 			}
 		else:
 			raise NotImplementedError
+		try:
+			entity_args = {k:response[v] for k,v in entity.items()}
+		except Exception as exception:
+			if False:
+				pprint(self.raw_response)
+				pprint(self.error_message)
+				pprint(self.parameters)
+				pprint(entity)
+				pprint(response)
+			raise exception
 
-		entity_args = {k:response[v] for k,v in entity.items()}
+		if self.endpoint == 'video' or self.endpoint == 'playlist':
+			if 'channel' in kwargs:
+				channel = kwargs['channel']
+			else:
+				channel = None 
+			
+			entity_args['channel'] = channel
+
+		if 'tags' not in entity_args:
+			entity_args['tags'] = list()
+
 		return entity_args
 
 	def toStandard(self):
-
+		if not self.status:
+			return None
 		api_response = self.extractOne()
 
 		if self.endpoint == 'channel':
@@ -165,8 +193,9 @@ class ApiResponse:
 			channel_views       = api_response['statistics']['viewCount']
 			channel_videos      = api_response['statistics']['videoCount']
 
+			channel_date = timetools.Timestamp(channel_date)
 
-			api_call = {
+			standard = {
 				'itemKind':    'channel',
 				'itemId':      channel_id,
 				'channelId':    channel_id,
@@ -190,8 +219,18 @@ class ApiResponse:
 			video_description   = api_response['snippet']['description']
 			tags                = api_response['tags']
 
+			if view_count is None:
+				view_count = 0 
+			if like_count is None:
+				like_count = 0
+			if dislike_count is None:
+				dislike_count = 0 
 
-			api_call = {
+			
+			video_duration = timetools.Duration(video_duration)
+			video_date = timetools.Timestamp(video_date)
+
+			standard = {
 				'itemKind': 'video',
 				'itemId': video_id,
 				'videoId': video_id,
@@ -206,29 +245,31 @@ class ApiResponse:
 				'videoTags': tags
 			}
 		elif self.endpoint == 'playlist':
+
 			playlist_id     = api_response['id']
 			playlist_name   = api_response['snippet']['title']
 			playlist_channel= api_response['snippet']['channelId']
 			playlist_videos = api_response['contentDetails']['itemCount']
-
-			api_call = {
+			playlist_description = api_response['snippet']['description']
+			standard = {
 				'itemKind': 'playlist',
 				'itemId': playlist_id,
 				'playlistId': playlist_id,
 				'playlistName': playlist_name,
 				'channelId': playlist_channel,
+				'playlistDescription': playlist_description,
 				'playlistItemCount': playlist_videos,
 				'playlistItems': None
 			}
+
 			playlist_items = self.getPlaylistItems(playlist_id)
-			api_call['playlistItems'] = playlist_items
+			standard['playlistItems'] = playlist_items
 		else:
 			raise NotImplementedError
 
-		result = {k:api_response[v] for k,v in api_call.items()}
-		return result
+		return standard
 
-	def _extractAllPages(self, **parameters):
+	def _extractAllPages(self, kind, key, **parameters):
 		items = list()
 
 		page_parameters = parameters
@@ -258,42 +299,68 @@ class ApiResponse:
 
 		return items
 
-	def _request(self, kind = None, **parameters):
+	def _verifyResponse(self, parameters, response):
+		error_response = response.get('error')
+		if error_response:
+			status = False
+			error_message = error_response
+			error_code = error_response['code']
+
+			if error_code == 503: # Common backend error
+				response = None 
+
+		elif len(response['items']) == 0:
+			status = False
+			error_code = -1
+			error_message = {
+				'errorMessage': 'No items were found',
+				'apiResponse': response
+			}
+		else:
+			error_code = 0
+			error_message = {
+				'errorMessage': 'No Errors'
+			}
+			status = True
+
+		self.status = status 
+		self.error_code = error_code 
+		self.error_message = error_message
+
+
+		if not self.status:
+			if error_code != -1:
+				message = "Not a -1 error!"
+				print("\nerror message\n")
+				pprint(error_message)
+				print("\nParameters\n")
+				pprint(parameters)
+				print("\nResponse\n")
+				pprint(response)
+				message = "invalid parameters!"
+				raise ValueError(message)
+	def _request(self, kind = None, request_key = None, **parameters):
 
 		if kind is None:
 			kind = self.endpoint
+		
+		if request_key is None and kind != 'playlistItems':
+			raise ValueError("'key' was not provided.")
 
-		base_url = self.endpoints[kind + 's']
+		if kind.endswith('s'):
+			base_url = self.endpoints[kind]
+		else:
+			base_url = self.endpoints[kind + 's']
 
 		try:
-			parameters = self._getParameters(kind)
+			parameters = self._getParameters(kind, request_key, parameters)
 			response = requests.get(base_url, params=parameters).json()
 
 		except Exception as exception:
 			print(str(exception))
-			response = {'code': 404}
+			raise ValueError
 		
-		error_response = response.get('error')
-		if error_response:
-			self.status = False
-			error_code = error_response['code']
-			if error_code == 503: # Common backend error
-				response = None 
-			elif error_code == 403:
-				pprint(error_response)
-				message = "Daily Usage limit reached!"
-				raise ValueError(message)
-
-			elif error_code == 400:
-				pprint(parameters)
-				pprint(response)
-				message = "Missing a required parameter!"
-				raise ValueError(message)
-			else:
-				response = None
-		
-		else:
-			self.status = True
+		self._verifyResponse(parameters, response)
 
 
 		return response
@@ -308,9 +375,7 @@ class ApiResponse:
 				self.status = False
 			else:
 				message = "Unsupported error '{}'".format(self.error_code)
-				pprint(response)
 				raise ValueError(message)
-
 		else:
 			self.error_code = None 
 			self.status = True
@@ -325,8 +390,11 @@ class ApiResponse:
 			try:
 				value = key_type(value)
 			except Exception as exception:
-				print(exception)
-			_result[key] = (value, isinstance(value, key_type))
+				if False:
+					print("_generateValidatedApiResponse(): ")
+					print("\tkey, keyType, value: ", (key, key_type, value))
+					print("\t", str(exception))
+				_result[key] = (value, isinstance(value, key_type))
 		return _result
 
 	def _validateApiResponse(self, response):
@@ -340,7 +408,7 @@ class ApiResponse:
 			snippet_keys = [
 				'title', 'id', 'channelId', 'channelTitle', 
 				'description', 'defaultAudioLanguage', 'liveBroadcastContent', 'publishedAt',
-				]
+			]
 			snippet_types = str
 			required_snippet_keys = ['title', 'id', 'channelId', 'channelTitle', 'description', 'publishedAt']
 
@@ -369,7 +437,7 @@ class ApiResponse:
 				'id', 'channelId', 'channelTitle', 
 				'description', 'publishedAt', 'title'
 			]
-			snippet_types = [str, str, str,str,datetime.datetime, str]
+			snippet_types = [str, str, str,str, timetools.Timestamp, str]
 			required_snippet_keys = ['id', 'title', 'channelId']
 			#snippet_types = str
 
@@ -456,11 +524,6 @@ class ApiResponse:
 			response_kind = resource['kind']
 			tags = []
 			is_valid = snippet_is_valid
-		elif self.endpoint == 'search':
-			item_kind = snippet['resourceId']['kind']
-			response_id = snippet['resourceId'][item_kind.split('#')[1] + 'Id']
-			is_valid = True
-			tags = []
 		else:
 			tags = []
 			is_valid  = False
@@ -482,29 +545,29 @@ class ApiResponse:
 	def getPlaylistItems(self, key):
 		""" Returns a list of all items contained in the playlist. """
 
-		playlist_items_parameters = self._getParameters('playlistItems')
-		playlist_items_parameters['playlistId'] = key
-		playlist_items = self._request('playlistItems', **playlist_items_parameters)
-		p_items = playlist_items.getItems(
-			lambda s: {'itemId': s['id'], 'itemKind': s['itemKind']}
-		)
+		playlist_items = self._request('playlistItems', request_key = key)#**playlist_items_parameters)
+		if playlist_items is None:
+			return list()
+
+		p_items = [
+			{'itemId': s['id'], 'itemKind': s['kind']} for s in playlist_items['items']
+		]
 		return p_items
 
-	def getChannelItems(self, key, channel = None):
+	def getChannelItems(self, key):
 
 		#channel = self.getChannel(key)
 		search_parameters = {
-			'key': self.api_key,
+			'key': API_KEY,
 			'part': 'id',
 			'channelId': key,
 			'maxResults': '50'
 		}
+		search_response = self.search(**search_parameters)
 
-		search_response = self._request('search', **search_parameters)
-		
 		channel_items = list()
 		
-		for item in search_response.getItems():
+		for item in search_response['items']:
 			item_kind = item['id']['kind'].split('#')[1]
 			item_id = item['id'][item_kind + 'Id']
 
@@ -516,6 +579,23 @@ class ApiResponse:
 			channel_items.append(element)
 
 		return channel_items
+
+	def search(self, **parameters):
+		
+		endpoint = self.endpoints['searchs']
+		items = list()
+		while True:
+			response = requests.get(endpoint, params = parameters)
+			response = response.json()
+			response_items = response.get('items', [])
+			items += response_items
+			next_page_token = response.get('nextPageToken')
+			if next_page_token is not None and len(response_items) != 0:
+				parameters['pageToken'] = next_page_token
+			else:
+				break
+		response['items'] = items
+		return response
 
 	@property
 	def cost(self):
@@ -532,6 +612,8 @@ class YouTube:
 
 	def __init__(self, api_key):
 		self.api_key = api_key
-		self.attempts = 5
-		self.errors = list()
 
+	def request(self, endpoint, **parameters):
+		pass
+	def search(self, **parameters):
+		pass

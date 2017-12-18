@@ -115,7 +115,7 @@ def parseEntityArguments(entity_type, entity_args = None, **kwargs):
 	elif entity_type == 'video':
 		args = {
 			'id': parseKeywords(result, ['videoId', 'id']),
-			'title': parseKeywords(result, ['videoName', 'name', 'title']),
+			'name': parseKeywords(result, ['videoName', 'name', 'title']),
 			'views': parseKeywords(result, ['views', 'viewCount', 'videoViewCount'], int),
 			'likes': parseKeywords(result, ['likes', 'likeCount', 'videoLikeCount'], int),
 			'dislikes': parseKeywords(result, ['dislikes', 'dislikeCount', 'videoDislikeCount'], int),
@@ -169,8 +169,6 @@ def validateEntity(entity_type, **data):
 			data: dict
 	"""
 
-	pprint(data)
-
 	validation = dict()
 	if entity_type == 'channel':
 		for key in ['id', 'name', 'description']:
@@ -193,7 +191,7 @@ def validateEntity(entity_type, **data):
 		value = data.get('string')
 		validation['string'] = (value, isinstance(value, str))
 	elif entity_type == 'video':
-		for key in ['id', 'name', 'description', 'videoName']:
+		for key in ['id', 'name', 'description']:
 			value = data.get(key)
 			validation[key] = (value, isinstance(value, str))
 		for key in ['views', 'likes', 'dislikes']:
@@ -216,8 +214,9 @@ def validateEntity(entity_type, **data):
 		print("Entity Type: ", entity_type)
 		print()
 		for key, value in sorted(validation.items()):
-			a = value[0] if not value[1] else ""
-			print(key, '\t', a, '\t', value[1])
+			if value[1]: continue
+			a = value[0]
+			print('\t', key, '\t', a, '\t', value[1])
 	
 	return valid
 
