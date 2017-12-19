@@ -19,15 +19,17 @@ if __name__ == '__main__':
 	#youtube.importChannel(test_channel)
 	
 	if True:
-		#test_database = YouTubeDatabase(youtube, filename = 'youtube_database')
-		#print("Database Filename: ", test_database.filename)
-		#pprint(subscriptions)f
+
 		all_metrics = dict()
 		f_name = os.path.join(os.path.dirname(__file__), 'import_metrics.json')
+		index = 0
+		#pprint(subscriptions)
 		for key, value in sorted(subscriptions.items()):
-
+			index += 1
+			print("\n{} of {}".format(index, len(subscriptions)))
 			metrics = youtube.importChannel(value)
 			all_metrics[key] = metrics
 		
 		with open(f_name, 'w') as file1:
-			file1.write(json.dumps(metrics, sort_keys = True, indent = 4))
+			file1.write(json.dumps(all_metrics, sort_keys = True, indent = 4))
+

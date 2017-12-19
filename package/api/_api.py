@@ -17,36 +17,25 @@ class ApiResponse:
 	def __init__(self, endpoint, key, **kwargs):
 		if endpoint.endswith('s'): 
 			endpoint = endpoint[:-1]
-		self.status = None
-		self.error_code = None
+		self.error_information = None 
+		self.request_key = key
 		self.endpoint = endpoint
 
 		self.raw_response = self._request(endpoint, key, **kwargs)
 
 		if 'nextPageToken' in self.raw_response:
-			self.raw_response['items'] = self._extractAllPages(endpoint, key, **kwargs)
+			self.raw_response['items'] = self._extractAllPages(**kwargs)
  
 		self.validated_items = list()
 		if self.status:
 			for item in self.raw_response['items']:
-				self.validated_items.append(self._validateApiResponse(item))
-				
-
-	def __iter__(self):
-		for i in self.getItems():
-			yield i
-
-	def __getitem__(self, key):
-		if self.status:
-			if key == 'items':
-				item = self.getItems()
-			else:
-				item = self.response.get(key)
-		else:
-			item = None 
-		
-		return item
-
+				response_item = self._validateResponseItems(item)
+				_passed_validation = response_item['errorInformation']
+				if not _passed_validation:
+					pprint(response_item)
+					raise ValueError("Response Item did not pass validation.")
+				else:
+					self.validated_items.append(response_item)
 	def __str__(self):
 		string = "ApiResponse('{}', status = '{}')".format(self.endpoint, self.status)
 		return string
@@ -96,14 +85,20 @@ class ApiResponse:
 		elif len(provided_parameters) != 0:
 			parameters = provided_parameters
 		else:
-			print("KIND: ", kind)
-			print("KEY: ", request_key)
-			raise ValueError
+			parameters = None
 
 		if parameters is None:
-			print("KIND: ", kind)
-			print("Provided Parameters: ")
-			pprint(provided_parameters)
+			error_info = {
+				'errorMessage': "Cannot properly set the parameters.",
+				'inFunction': "ApiResponse._getParameters",
+				'input': {
+					'kind': kind,
+					'request_key': request_key,
+					'provided_parameters': provided_parameters
+				},
+				'parameters': parameters
+			}
+			pprint(error_info)
 			raise NotImplementedError
 		parameters['key'] = API_KEY
 		self.parameters = parameters
@@ -157,13 +152,19 @@ class ApiResponse:
 		try:
 			entity_args = {k:response[v] for k,v in entity.items()}
 		except Exception as exception:
-			if False:
-				pprint(self.raw_response)
-				pprint(self.error_message)
-				pprint(self.parameters)
-				pprint(entity)
-				pprint(response)
+			error_information = {
+				'input': {
+					'kwargs': kwargs
+				},
+				'inFunction': "ApiResponse.toEntity",
+				'errorMessage': str(exception),
+				'apiResponse': self.raw_response,
+				'entity': entity,
+				'response': response
+			}
+			pprint(error_information)
 			raise exception
+
 
 		if self.endpoint == 'video' or self.endpoint == 'playlist':
 			if 'channel' in kwargs:
@@ -179,8 +180,7 @@ class ApiResponse:
 		return entity_args
 
 	def toStandard(self):
-		if not self.status:
-			return None
+
 		api_response = self.extractOne()
 
 		if self.endpoint == 'channel':
@@ -262,14 +262,14 @@ class ApiResponse:
 				'playlistItems': None
 			}
 
-			playlist_items = self.getPlaylistItems(playlist_id)
+			playlist_items = self.getPlaylistItems()
 			standard['playlistItems'] = playlist_items
 		else:
 			raise NotImplementedError
 
 		return standard
 
-	def _extractAllPages(self, kind, key, **parameters):
+	def _extractAllPages(self, **parameters):
 		items = list()
 
 		page_parameters = parameters
@@ -301,51 +301,50 @@ class ApiResponse:
 
 	def _verifyResponse(self, parameters, response):
 		error_response = response.get('error')
+
 		if error_response:
-			status = False
-			error_message = error_response
 			error_code = error_response['code']
+			status = False
 
 			if error_code == 503: # Common backend error
-				response = None 
+				error_message = "Common Backend Error."
+			else:
+				error_message = "Uncommon Error."
 
 		elif len(response['items']) == 0:
+
 			status = False
 			error_code = -1
-			error_message = {
-				'errorMessage': 'No items were found',
-				'apiResponse': response
-			}
+			error_message = "No items found."
 		else:
+			error_message = "No Errors."
 			error_code = 0
-			error_message = {
-				'errorMessage': 'No Errors'
-			}
 			status = True
 
-		self.status = status 
-		self.error_code = error_code 
-		self.error_message = error_message
+		error_info = {
+			'inputs': {
+				'parameters': parameters,
+				'response': response
+			},
+			'inFunction': "ApiResponse._verifyResponse",
+			'status': status,
+			'errorCode': error_code,
+			'errorMessage': error_message,
+			
+		}
 
+		self.error = error_info
+		
+		return error_info
 
-		if not self.status:
-			if error_code != -1:
-				message = "Not a -1 error!"
-				print("\nerror message\n")
-				pprint(error_message)
-				print("\nParameters\n")
-				pprint(parameters)
-				print("\nResponse\n")
-				pprint(response)
-				message = "invalid parameters!"
-				raise ValueError(message)
 	def _request(self, kind = None, request_key = None, **parameters):
 
 		if kind is None:
 			kind = self.endpoint
 		
+		error_message  = None
 		if request_key is None and kind != 'playlistItems':
-			raise ValueError("'key' was not provided.")
+			error_message = "'key' was not provided."
 
 		if kind.endswith('s'):
 			base_url = self.endpoints[kind]
@@ -357,28 +356,28 @@ class ApiResponse:
 			response = requests.get(base_url, params=parameters).json()
 
 		except Exception as exception:
-			print(str(exception))
-			raise ValueError
-		
-		self._verifyResponse(parameters, response)
-
-
-		return response
-
-	def _getErrorStatus(self, response):
-		error_response = response.get('error')
-		if error_response:
-			self.error_code = error_response['code']
-			if self.error_code == 503: # Common backend error
-				self.status = False
-			elif self.error_code == 404:
-				self.status = False
-			else:
-				message = "Unsupported error '{}'".format(self.error_code)
-				raise ValueError(message)
+			error_message = str(exception)
+			response = None
+			
+		if error_message:
+			error_information = {
+				'input': {
+					'kind': kind,
+					'request_key': request_key,
+					'parameters': parameters
+				},
+				'inFunction': "ApiResponse._request",
+				'error_message': error_message
+			}
 		else:
-			self.error_code = None 
-			self.status = True
+			error_information = self._verifyResponse(parameters, response)
+
+		self.error_information = error_information
+		error_code = error_information['errorCode']
+		if not error_information['status'] and error_code not in [-1, 503]:
+			pprint(error_information)
+			raise ValueError("An error occured in ApiResponse._request()!")
+		return response
 
 	@staticmethod
 	def _generateValidatedApiResponse(response, keys, key_types):
@@ -394,13 +393,37 @@ class ApiResponse:
 					print("_generateValidatedApiResponse(): ")
 					print("\tkey, keyType, value: ", (key, key_type, value))
 					print("\t", str(exception))
-				_result[key] = (value, isinstance(value, key_type))
+			_result[key] = (value, isinstance(value, key_type))
 		return _result
 
-	def _validateApiResponse(self, response):
+	def _validateResponseItems(self, response):
 
 		_expand = lambda s: {k:v[0] for k,v in s.items()}
-		_checkIfValid = lambda a, b: all(a[k][1] for k in b)
+		_check = lambda a, b: all(a[k][1] for k in b)
+		def _checkIfValid(validated, required, response, part):
+
+			try:
+				result = _check(validated, required)
+				error_information = None
+				error_message = "No Error"
+			except KeyError as exception:
+				error_message = str(exception)
+				result = False
+			error_information = {
+				'input': {
+					'response': response,
+					'part': part,
+					'validated': validated,
+					'required': required
+				},
+				'inFunction': "_validateResponseItems",
+				'errorMessage': error_message,
+				'endpoint': self.endpoint,
+				'rawResponse': self.raw_response
+			}
+			output = {'status': result, 'error': error_information}
+
+			return output
 
 		response_id = response['id']
 		
@@ -466,18 +489,17 @@ class ApiResponse:
 			pprint(response)
 			raise NotImplementedError
 
-		snippet = response.get('snippet')
-		statistics = response.get('statistics')
+		snippet 		= response.get('snippet')
+		statistics 		= response.get('statistics')
 		content_details = response.get('contentDetails')
-		topic_details = response.get('topicDetails', dict())
+		topic_details 	= response.get('topicDetails', dict())
 
 		# Validate Snippet
 
 		if snippet and snippet_keys:
 			validated_snippet = self._generateValidatedApiResponse(snippet, snippet_keys, snippet_types)
 			parsed_snippet = _expand(validated_snippet)
-			
-			snippet_is_valid = _checkIfValid(validated_snippet, required_snippet_keys)
+			snippet_is_valid = _checkIfValid(validated_snippet, required_snippet_keys, response, 'snippet')
 		else:
 			parsed_snippet = None
 			snippet_is_valid = False
@@ -487,7 +509,7 @@ class ApiResponse:
 		if statistics and statistics_keys:
 			validated_statistics = self._generateValidatedApiResponse(statistics, statistics_keys, statistics_types)
 			parsed_statistics = _expand(validated_statistics)
-			statistics_is_valid = _checkIfValid(validated_statistics, required_statistics_keys)
+			statistics_is_valid = _checkIfValid(validated_statistics, required_statistics_keys, response, 'statistics')
 		else:
 			parsed_statistics = None
 			statistics_is_valid = False
@@ -496,15 +518,27 @@ class ApiResponse:
 		if content_details and content_details_keys:
 			validated_content_details = self._generateValidatedApiResponse(content_details, content_details_keys, content_details_types)
 			parsed_content_details = _expand(validated_content_details)
-			content_details_is_valid = _checkIfValid(validated_content_details, required_content_details_keys)
+			content_details_is_valid = _checkIfValid(validated_content_details, required_content_details_keys, response, 'contentDetails')
 		else:
 			parsed_content_details = None
 			content_details_is_valid = False
 
+		if isinstance(snippet_is_valid, dict)  and not snippet_is_valid['status']:
+			error_message = snippet_is_valid
+		#elif isinstance(statistics_is_valid, dict) and not statistics_is_valid['status']:
+		#	error_message = statistics_is_valid
+		elif isinstance(content_details_is_valid, dict) and not content_details_is_valid['status']:
+			error_message = content_details_is_valid 
+		else:
+			error_message = None
+		
+		if error_message is not None:
+			pprint(error_message)
+			raise KeyError("There was a KeyError.")
+
 		response_kind = self.endpoint
 
 		if self.endpoint == 'video':
-			
 			tags = snippet.get('tags', [])
 			tags += topic_details.get('topicCategories', [])
 			tags += topic_details.get('relevantTopicIds', [])
@@ -530,6 +564,15 @@ class ApiResponse:
 
 		tags = [str(i).lower() for i in tags]
 
+		error_info = {
+			'input': {
+				'response': response
+			},
+			'inFunction': "ApiResponse._validateResponseitems'",
+			'errorMessage': "Error when validating the api response.",
+			'status': is_valid
+		}
+
 		result = {
 			'id': response_id,
 			'itemKind': response_kind,
@@ -538,29 +581,32 @@ class ApiResponse:
 			'snippet': parsed_snippet,
 			'statistics': parsed_statistics,
 			'contentDetails': parsed_content_details,
-			'topicDetails': topic_details
+			'topicDetails': topic_details,
+			'errorInformation': error_info
 		}
 		return result
 
-	def getPlaylistItems(self, key):
+	def getPlaylistItems(self):
 		""" Returns a list of all items contained in the playlist. """
 
-		playlist_items = self._request('playlistItems', request_key = key)#**playlist_items_parameters)
+		playlist_items = self._request('playlistItems', request_key = self.request_key)#**playlist_items_parameters)
 		if playlist_items is None:
-			return list()
-
-		p_items = [
-			{'itemId': s['id'], 'itemKind': s['kind']} for s in playlist_items['items']
-		]
+			p_items = []
+		else:
+			p_items = [
+				{'itemId': s['id'], 'itemKind': s['kind']} for s in playlist_items['items']
+			]
 		return p_items
 
-	def getChannelItems(self, key):
+	def getChannelItems(self):
 
-		#channel = self.getChannel(key)
+		if self.endpoint != 'channel':
+			message = "Entity '{}' does not have channel items.".format(self.endpoint)
+			raise ValueError(message)
 		search_parameters = {
 			'key': API_KEY,
 			'part': 'id',
-			'channelId': key,
+			'channelId': self.request_key,
 			'maxResults': '50'
 		}
 		search_response = self.search(**search_parameters)
@@ -584,6 +630,7 @@ class ApiResponse:
 		
 		endpoint = self.endpoints['searchs']
 		items = list()
+
 		while True:
 			response = requests.get(endpoint, params = parameters)
 			response = response.json()
@@ -602,9 +649,10 @@ class ApiResponse:
 		_cost = 0
 
 		return _cost
-	@property
-	def response(self):
-		return self.extractOne()
+
+	@property 
+	def status(self):
+		return self.error_information.get('status', True)
 
 
 class YouTube:
