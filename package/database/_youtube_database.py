@@ -61,8 +61,8 @@ class YouTubeDatabase:
 			response = self.access('add', kind, response)
 
 		return response
-	
-	def callApi(self, kind, key):
+	@staticmethod
+	def callApi(kind, key):
 		return ApiResponse(kind, key)
 	
 	def _getEntityClass(self, kind):
@@ -190,7 +190,6 @@ class YouTubeDatabase:
 				print("\nClean Data\n")
 				pprint(parameters)
 			raise exception
-			result = None
 		return result
 	
 
@@ -211,7 +210,7 @@ class YouTubeDatabase:
 
 		print("Importing all items for '{}'...".format(channel.name))
 
-		items = api_response.getChannelItems(key)
+		items = api_response.getChannelItems()
 		metrics = {
 			'found': list(),
 			'failed': list()
@@ -228,9 +227,9 @@ class YouTubeDatabase:
 				entity = self._importPlaylist(item_id, channel = channel)
 
 			if entity is not None:
-				metrics['found'].append(entity)
+				metrics['found'].append(entity.id)
 			else:
-				metrics['failed'].append(item)
+				metrics['failed'].append(item_id)
 
 		return metrics
 

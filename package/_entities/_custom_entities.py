@@ -9,9 +9,3 @@ class CustomVideo:
 	@property 
 	def publishDate(self):
 		raise NotImplementedError
-
-class CustomChannel:
-
-	def getVideos(self, string):
-		""" finds videos based on a tag. """
-		pass
