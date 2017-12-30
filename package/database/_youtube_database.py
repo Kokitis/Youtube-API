@@ -211,10 +211,8 @@ class YouTubeDatabase:
 		print("Importing all items for '{}'...".format(channel.name))
 
 		items = api_response.getChannelItems()
-		metrics = {
-			'found': list(),
-			'failed': list()
-		}
+
+		metrics = list()
 		progress_bar = progressbar.ProgressBar(max_value = len(items))
 		for index, item in enumerate(items):
 			progress_bar.update(index)
@@ -225,11 +223,8 @@ class YouTubeDatabase:
 				entity = self.access('import', item_kind, item_id, channel = channel)
 			else:
 				entity = self._importPlaylist(item_id, channel = channel)
-
-			if entity is not None:
-				metrics['found'].append(entity.id)
-			else:
-				metrics['failed'].append(item_id)
+			item['status'] = entity is not None
+			metrics.append(item)
 
 		return metrics
 

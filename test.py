@@ -14,22 +14,30 @@ if __name__ == '__main__':
 	test_video = "FrLgREKD4kk"
 	test_channel = "UCjdQaSJCYS4o2eG93MvIwqg"
 	test_playlist = "PL1cXh4tWqmsEQPeLEJ5V3k5knt-X9k043"
-	youtube = YouTubeDatabase(API_KEY)
+	youtube = YouTubeDatabase(API_KEY, filename = 'videos - 2017-12-28')
 	
 	#youtube.importChannel(test_channel)
 	
 	if True:
-
-		all_metrics = dict()
+		all_metrics = list()
 		f_name = os.path.join(os.path.dirname(__file__), 'import_metrics.json')
 		index = 0
 		#pprint(subscriptions)
 		for key, value in sorted(subscriptions.items()):
 			index += 1
+			if value != 'UCsB0LwkHPWyjfZ-JwvtwEXw': 
+				pass
 			print("\n{} of {}".format(index, len(subscriptions)))
 			metrics = youtube.importChannel(value)
-			all_metrics[key] = metrics
-		
-		with open(f_name, 'w') as file1:
-			file1.write(json.dumps(all_metrics, sort_keys = True, indent = 4))
+			if metrics is None:
+				metrics = [{
+					'itemKind': 'channel',
+					'itemId': value,
+					'itemName': key,
+					'itemChannelName': key,
+					'itemChannelId': value
+				}]
+			all_metrics += metrics
+			metrics_df = pandas.DataFrame(all_metrics)
+			metrics_df.to_excel('import_metrics.xlsx')
 
