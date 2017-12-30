@@ -598,28 +598,40 @@ class ApiResponse:
 			]
 		return p_items
 
+	def _getChannelItems(self):
+		search_parameters = {
+			'key': API_KEY,
+			'part': 'id,snippet',
+			'channelId': self.request_key,
+			'maxResults': '50'
+		}
+		search_response = self.search(**search_parameters)
+		return search_response
+
 	def getChannelItems(self):
 
 		if self.endpoint != 'channel':
 			message = "Entity '{}' does not have channel items.".format(self.endpoint)
 			raise ValueError(message)
-		search_parameters = {
-			'key': API_KEY,
-			'part': 'id',
-			'channelId': self.request_key,
-			'maxResults': '50'
-		}
-		search_response = self.search(**search_parameters)
 
+		search_response = self._getChannelItems()
 		channel_items = list()
 		
 		for item in search_response['items']:
+			item_snippet = item['snippet']
 			item_kind = item['id']['kind'].split('#')[1]
 			item_id = item['id'][item_kind + 'Id']
 
+			item_name = item_snippet['title']
+			item_channel_name = item_snippet['channelTitle']
+			item_channel_id = item_snippet['channelId']
+
 			element = {
 				'itemKind': item_kind,
-				'itemId': item_id
+				'itemId': item_id,
+				'itemName': item_name,
+				'itemChannelName': item_channel_name,
+				'itemChannelId': item_channel_id
 			}
 
 			channel_items.append(element)
