@@ -99,7 +99,7 @@ class YouTubeDatabase:
 				key = kwargs['id']
 
 			else:
-				key = api_response.toEntity()['id']
+				key = api_response.toSqlEntity()['id']
 		
 		if method in ['get', 'import']:
 			result = self.getEntity(entity_type, key)
@@ -112,7 +112,7 @@ class YouTubeDatabase:
 		if api_response is None:
 			api_response = self.callApi(entity_type, key)
 
-		entity_attributes = api_response.toEntity(**kwargs)
+		entity_attributes = api_response.toSqlEntity(**kwargs)
 		entity_tags = entity_attributes['tags']
 		tags = list()
 		for tag in entity_tags:
@@ -248,7 +248,7 @@ class YouTubeDatabase:
 				channel_id = playlist_standard['channelId']
 				channel = self.access('import', 'channel', channel_id)
 
-			playlist_entity = playlist_response.toEntity(channel = channel)
+			playlist_entity = playlist_response.toSqlEntity(channel = channel)
 
 			playlist_entity['channel'] = channel
 			playlist_tags = playlist_entity.pop('tags')
