@@ -6,14 +6,12 @@ from pony.orm import Database, db_session
 import progressbar
 
 from .._entities import importEntities
-from ..github import DATA_FOLDER, youtube_api_key
-from .validation import parseEntityArguments, validateEntity
-from .. import ApiResponse
-
-ApiResponse.api_key = youtube_api_key
+from ..github import DATA_FOLDER
+from .validation import parseEntityArguments
+from .. import YouTube
 
 class YouTubeDatabase:
-	def __init__(self, api_key, filename = None):
+	def __init__(self, api_key = None, filename = None):
 		if filename is None:
 			filename = os.path.join(DATA_FOLDER, 'youtube_database.sqlite')
 		elif os.path.isdir(filename):
@@ -32,7 +30,7 @@ class YouTubeDatabase:
 			with open(self.error_filename, 'r') as file1:
 				self._error_log = json.loads(file1.read())
 		
-		self.api_key = api_key
+		self.api = YouTube(api_key)
 
 		self._db = Database()
 		self._db.bind(provider='sqlite', filename=filename, create_db = True)
@@ -46,6 +44,9 @@ class YouTubeDatabase:
 			file1.write(json.dumps(self._error_log, sort_keys = True, indent = 4))
 	
 	def __call__(self, kind, key):
+		return self.getEntity(kind, key)
+
+	def getEntity(self, kind, key):
 		if kind.endswith('s'):
 			kind = kind[:-1]
 
@@ -55,15 +56,14 @@ class YouTubeDatabase:
 		# If it doesn't exist, add it.
 		if response is None:
 			if kind == 'tag':
-				response = key 
+				response = key
 			else:
 				response = self.callApi(kind, key)
 			response = self.access('add', kind, response)
 
 		return response
-	@staticmethod
-	def callApi(kind, key):
-		return ApiResponse(kind, key)
+	def callApi(self, kind, key):
+		return self.api.get(kind, key)
 	
 	def _getEntityClass(self, kind):
 		if kind.endswith('s'):
@@ -147,7 +147,7 @@ class YouTubeDatabase:
 					pprint(kwargs)
 				raise KeyError("Could not find the channelId.")
 
-			channel = self('channel', channel_id)
+			channel = self.getEntity('channel', channel_id)
 			tags = [self.access('import', 'tag', tag) for tag in parameters['tags']]
 			parameters['channel'] = channel
 			parameters['tags'] = tags
@@ -165,7 +165,7 @@ class YouTubeDatabase:
 					pprint(kwargs)
 				raise KeyError("Could not find the channelId.")
 			
-			channel = self('channel', channel_id)
+			channel = self.getEntity('channel', channel_id)
 			parameters['channel'] = channel
 		else:
 			pass
@@ -198,7 +198,7 @@ class YouTubeDatabase:
 	def importChannel(self, key):
 		""" Imports the videos and playlists associated with a given channel.
 		"""
-		api_response = self.callApi('channel', key)
+		api_response = self.api.get('channels', key)
 		if not api_response.status:
 			print("Could not find Channel: ", key)
 			return None
@@ -210,7 +210,7 @@ class YouTubeDatabase:
 
 		print("Importing all items for '{}'...".format(channel.name))
 
-		items = api_response.getChannelItems()
+		items = self.api.getChannelItems(key)
 
 		metrics = list()
 		progress_bar = progressbar.ProgressBar(max_value = len(items))
