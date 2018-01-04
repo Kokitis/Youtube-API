@@ -93,7 +93,7 @@ def parseEntityArguments(entity_type, entity_args = None, **kwargs):
 	"""
 		Parameters
 		----------
-			entity_type: {'channel', 'playlist', 'tag', 'video'}
+			entity_type: Entity, {'channel', 'playlist', 'tag', 'video'}
 			entity_args: dict<str:scalar>
 
 	"""
@@ -158,7 +158,7 @@ def parseEntityArguments(entity_type, entity_args = None, **kwargs):
 	if len(args) == 0: args = None
 	return args
 
-from pprint import pprint
+
 def validateEntity(entity_type, **data):
 	""" Validates that an entity is properly defined.
 		Used to ensure the data can be used to create a new instance

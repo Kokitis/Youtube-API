@@ -1,5 +1,7 @@
 
 from pprint import pprint
+from functools import partial
+pprint = partial(pprint, width = 200)
 from ..github import timetools
 class ApiResponse:
 	"""
@@ -12,37 +14,39 @@ class ApiResponse:
 			api_response: requests.models.Response
 				The output of the api_request. Each request will be saved in the 'items' field of a json object,
 				and may contain more than on item.
-			kwargs:
 	"""
 
-	def __init__(self, api_response, **kwargs):
+	def __init__(self, api_response):
 
-		self.api_response = api_response
-		if isinstance(api_response, dict):
-			json_response = api_response
-		else:
-			json_response = self.api_response.json()
+		self._parseResponse(api_response)
 
-		response_items = json_response.get('items', [])
-
-		if len(response_items) == 1:
-			json_response = response_items.pop()
-			self.endpoint = self._getEndpoint(json_response)
-
-			self.data = self._parseApiResponse(json_response)
-			self.items = list()
-
-		else:
-			self.data = dict()
-			self.endpoint = ""
-			self.items = [ApiResponse(i) for i in response_items]
-			raise NotImplementedError
-
+	def __bool__(self):
+		return self.status
 
 	def __str__(self):
 		string = "ApiResponse('{}', '{}')".format(self.endpoint, self.data['id'])
 		return string
 
+
+	@staticmethod
+	def _getResponseType(response):
+		"""
+			Determines whether the input referes to a search response from the api or an element from the api directly.
+		Parameters
+		----------
+		response
+
+		Returns
+		-------
+
+		"""
+		response_type =response['kind']
+		if response_type.lower().endswith('listresponse'):
+			response_type = 'listReponse'
+		else:
+			response_type = response_type.split('#')[1]
+
+		return response_type
 	@staticmethod
 	def _getEndpoint(response):
 		"""
@@ -75,6 +79,63 @@ class ApiResponse:
 
 		return endpoint
 
+	def _parseResponse(self, api_response):
+
+		# Parse Single Entity
+		self.api_response = api_response
+		if isinstance(api_response, dict):
+			json_response = api_response
+			status_code = api_response.get('error', 200)
+			if isinstance(status_code, dict):
+				status_code = status_code.get('code', -1)
+		else:
+			status_code = api_response.status_code
+			json_response = self.api_response.json()
+
+		try:
+			response_type = self._getResponseType(json_response)
+		except KeyError as exception:
+			pprint(json_response)
+
+			raise exception
+
+		if 'items' in json_response:
+			response_items = json_response.pop('items')
+		else:
+			response_items = [json_response]
+
+		if len(response_items) == 1:
+			raw_response = response_items.pop()
+
+			self.endpoint = self._getEndpoint(raw_response)
+			data = self._parseApiResponse(raw_response)
+			items = list()
+
+		elif len(response_items) > 1:
+			self.endpoint = response_type
+			data = json_response
+			items = [ApiResponse(i) for i in response_items]
+			items = list(i for i in items if i)
+			status_code = ""
+		elif len(response_items) == 0:
+			# There should be an item, but none were found.
+			data = json_response
+			self.endpoint = response_type
+			items = list()
+			status_code = -1
+		else:
+			raise NotImplementedError
+
+		self.data = data
+		self.items = items
+		self.status_code = status_code
+
+		self.next_page_token = json_response.get('nextPageToken')
+		self.previous_page_token = json_response.get('previousPageToken')
+		self.page_info = json_response.get('pageInfo')
+
+
+
 	def _parseApiResponse(self, api_response):
 		"""
 			Validates the response from the api and ensures each argument is of the correct datatype.
@@ -85,6 +146,7 @@ class ApiResponse:
 		if self.endpoint == 'playlistItems':
 			raise NotImplementedError
 		else:
+
 			validated_json_response = self._validateResponseAttributes(api_response)
 		return validated_json_response
 
@@ -160,10 +222,14 @@ class ApiResponse:
 
 		return attributes
 
+	def addResponse(self, response):
+		other = ApiResponse(response)
+		self.items += ApiResponse
+		self.next_page_token = other.next_page_token
 
-	def extractOne(self, converter = None):
+	def extractOne(self):
 		# items = self.getItems(function)
-		items = self.getItems(converter)
+		items = self.items
 
 		if len(items) == 0:
 			result = None
@@ -173,7 +239,8 @@ class ApiResponse:
 			result = items[0]
 
 		return result
-
+	def updateItems(self, items):
+		self.items += [ApiResponse(i) for i in items]
 	def toSqlEntity(self, **kwargs):
 		"""
 			Converts the data contained in the api response to a dict
@@ -182,6 +249,10 @@ class ApiResponse:
 		Parameters
 		----------
 		kwargs
+			Adds SQL relationships in the output. Includes:
+			'channel': A 'channel' object
+			'playlist': A 'playlist' object
+
 
 		Returns
 		-------
@@ -240,11 +311,7 @@ class ApiResponse:
 			raise exception
 
 		if self.endpoint == 'video' or self.endpoint == 'playlist':
-			if 'channel' in kwargs:
-				channel = kwargs['channel']
-			else:
-				raise NotImplementedError
-
+			channel = kwargs.get('channel')
 			sql_entity_args['channel'] = channel
 
 		if 'tags' not in sql_entity_args:
@@ -338,12 +405,42 @@ class ApiResponse:
 
 			playlist_items = kwargs.get('playlistItems', [])
 			standard['playlistItems'] = playlist_items
+		elif self.endpoint == 'playlistItem':
+			resource_id = api_response['snippet']['resourceId']
+
+			item_kind = resource_id['kind'].split('#')[1]
+			item_id = resource_id[item_kind + 'Id']
+
+			item_name = api_response['snippet']['title']
+			item_playlist_id = api_response['snippet']['playlistId']
+			item_channel_id = api_response['snippet']['channelId']
+			item_channel_name = api_response['snippet']['channelTitle']
+			item_description = api_response['snippet']['description']
+			item_publish_date = api_response['snippet']['publishedAt']
+
+
+			standard = {
+				'itemId': item_id,
+				'itemKind': item_kind,
+				'itemName': item_name,
+				'playlistId': item_playlist_id,
+				'channelId': item_channel_id,
+				'channelName': item_channel_name,
+				'itemDescription': item_description,
+				'itemPublishDate': item_publish_date
+			}
 		else:
-			raise NotImplementedError
+			message = "'{}' is not a supported endpoint!".format(self.endpoint)
+			if False:
+				pprint(self.api_response)
+				pprint(self.api_response.json())
+				pprint(self.data)
+			raise ValueError(message)
 
 		return standard
 
-
+	def toDict(self):
+		return self.api_response.json()
 
 	def _verifyResponseStatusCode(self, response):
 		error_response = response.get('errors')
@@ -386,9 +483,7 @@ class ApiResponse:
 	def _validateResponseAttributes(self, response):
 
 		_extractKeys = lambda data, keys: {k:data.get(k) for k in keys}
-
-		response_id = response['id']
-
+		response_id = response.get('id')
 		snippet = response.get('snippet')
 		statistics = response.get('statistics')
 		content_details = response.get('contentDetails')
@@ -464,8 +559,8 @@ class ApiResponse:
 			'input':        {
 				'response': response
 			},
-			'inFunction':   "ApiResponse._validateResponseitems'",
-			'errorMessage': "Error when validating the api response.",
+			'inFunction':   "ApiResponse._validateResponseAttributes'",
+			'errorMessage': "Error when validating the api response." if not is_valid else "No Errors",
 			'status':       is_valid
 		}
 
@@ -484,4 +579,11 @@ class ApiResponse:
 
 	@property
 	def status(self):
-		return self.api_response.status_code == 200
+		status_code = self.status_code
+		#status_code = self.api_response.status_code
+
+		return status_code == 200
+
+	@property
+	def id(self):
+		return self.data['id']

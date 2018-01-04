@@ -29,7 +29,7 @@ def importEntities(db):
 		name = Required(str)
 		videos = Set(Video)
 		playlists = Set('Playlist')
-		country = Optional(str)
+		country = Optional(str, default = 'none', nullable = True)
 		creationDate = Optional(datetime)
 		description = Optional(str)
 		subscriberCount = Optional(int, size = 64)

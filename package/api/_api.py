@@ -70,17 +70,6 @@ class YouTube:
 
 		return parameters
 
-	def getPlaylistItems(self, key):
-		""" Returns a list of all items contained in the playlist. """
-
-		playlist_items = self.get('playlistItems', key)  # **playlist_items_parameters)
-		if playlist_items is None:
-			p_items = []
-		else:
-			p_items = [
-				{'itemId': s['id'], 'itemKind': s['kind']} for s in playlist_items['items']
-			]
-		return p_items
 
 	def _getChannelItems(self, key):
 		search_parameters = {
@@ -118,6 +107,14 @@ class YouTube:
 
 		return channel_items
 
+	def getPlaylistItems(self, playlist_id):
+
+		parameters = self._getParameters('playlistItems', playlist_id)
+		api_response = self.request('playlistItems', **parameters)
+		result = list(ApiResponse(i) for i in api_response.json().get('items', []))
+		result = list(i for i in result if i)
+		return result
+
 	def request(self, endpoint, **parameters):
 		"""
 			Sends a raw request to the Youtube Api.
@@ -136,11 +133,6 @@ class YouTube:
 		parameters['key'] = self.api_key
 		response = requests.get(url, params = parameters)
 
-		status_code = response.status_code
-
-		if status_code != 200:  # 200 == success
-			print("Status Code: ", status_code)
-
 		return response
 
 	def get(self, endpoint, key):
@@ -153,7 +145,7 @@ class YouTube:
 
 		Returns
 		-------
-			dict
+			ApiResponse
 
 
 		"""
@@ -163,6 +155,14 @@ class YouTube:
 		response = self.request(endpoint, **parameters)
 
 		response = ApiResponse(response)
+
+		while response.next_page_token:
+			next_response = self.request(
+				endpoint,
+				nextPageToken = response.next_page_token,
+				**parameters
+			)
+			response.addResponse(next_response)
 
 		return response
 
@@ -184,33 +184,3 @@ class YouTube:
 		response['items'] = items
 		return response
 
-	def _extractAllPages(self, **parameters):
-		raise NotImplementedError
-		items = list()
-
-		page_parameters = parameters
-		index = 0
-		while True:
-			index += 1
-			response = self.request(endpoint, **page_parameters)
-
-			response_items = response.get('items', [])
-			next_page_token = response.get('nextPageToken')
-
-			_is_dict = isinstance(response, dict)
-
-			if _is_dict:
-				_items_valid = len(response_items) != 0
-				items += response_items
-				_page_valid = next_page_token is not None
-
-			else:
-				_items_valid = _page_valid = False
-
-			if _is_dict and _items_valid and _page_valid:
-				page_parameters['pageToken'] = next_page_token
-
-			else:
-				break
-
-		return items
