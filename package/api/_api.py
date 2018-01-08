@@ -1,6 +1,6 @@
 import requests
 from pprint import pprint
-
+from progressbar import ProgressBar
 from ._api_response import ApiResponse
 
 from ..github import youtube_api_key
@@ -81,12 +81,24 @@ class YouTube:
 		search_response = self.search(**search_parameters)
 		return search_response
 
-	def getChannelItems(self, channel_id):
 
-		search_response = self._getChannelItems(channel_id)
+	def getChannelItems(self, channel_id, **kwargs):
+		parameters = {
+			'id':   channel_id,
+			'part': 'contentDetails'
+		}
+
+		channel_response = self.request('channels', **parameters)
+		channel_response = channel_response.json()
+		channel_response = channel_response['items'][0]
+
+		upload_playlist = channel_response['contentDetails']['relatedPlaylists']['uploads']
+
+		playlist_items = self.getPlaylistItems(upload_playlist, part = 'id,snippet', **kwargs)
+
 		channel_items = list()
-
-		for item in search_response['items']:
+		for element in playlist_items:
+			"""
 			item_snippet = item['snippet']
 			item_kind = item['id']['kind'].split('#')[1]
 			item_id = item['id'][item_kind + 'Id']
@@ -102,16 +114,46 @@ class YouTube:
 				'itemChannelName': item_channel_name,
 				'itemChannelId':   item_channel_id
 			}
+			"""
 
 			channel_items.append(element)
 
 		return channel_items
 
-	def getPlaylistItems(self, playlist_id):
+	def getPlaylistItems(self, playlist_id, **kwargs):
 
+		verbose = kwargs.get('verbose')
 		parameters = self._getParameters('playlistItems', playlist_id)
-		api_response = self.request('playlistItems', **parameters)
-		result = list(ApiResponse(i) for i in api_response.json().get('items', []))
+		if 'part' in kwargs:
+			parameters['part'] = kwargs['part']
+
+		playlist_items = list()
+		index = 0
+		progress_bar = None
+		while True:
+			index += 1
+			api_response = self.request('playlistItems', **parameters)
+			api_response = api_response.json()
+			total_items = api_response['pageInfo']['totalResults']
+
+			next_page_token = api_response.get('nextPageToken')
+			page_items = api_response.get('items', [])
+
+			playlist_items += page_items
+			if verbose:
+				#string = "{}\t{} of {}\t{}".format(index, len(playlist_items), total_items, next_page_token)
+				#print(string)
+				if progress_bar is None:
+					progress_bar = ProgressBar(max_value = int(total_items))
+				progress_bar.update(len(playlist_items))
+
+			if next_page_token:
+				parameters['pageToken'] = next_page_token
+			else:
+				break
+
+		#result = list(ApiResponse(i) for i in api_response.json().get('items', []))
+		result = [ApiResponse(i) for i in playlist_items]
 		result = list(i for i in result if i)
 		return result
 
