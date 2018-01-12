@@ -11,12 +11,16 @@ class ApiResponse:
 
 		Parameters
 		----------
-			api_response: requests.models.Response
+			api_response: dict, Requests.Response
 				The output of the api_request. Each request will be saved in the 'items' field of a json object,
 				and may contain more than on item.
 	"""
 
 	def __init__(self, api_response):
+		if not isinstance(api_response, dict):
+			status_code = api_response.status_code
+			api_response = api_response.json()
+			api_response['statusCode'] = status_code
 
 		self._parseResponse(api_response)
 

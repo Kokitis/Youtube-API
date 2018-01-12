@@ -1,8 +1,7 @@
 import requests
-from pprint import pprint
 from progressbar import ProgressBar
-from ._api_response import ApiResponse
 
+from ._api_response import ApiResponse
 from ..github import youtube_api_key
 
 
@@ -17,59 +16,112 @@ class YouTube:
 		'watch':         'http://www.youtube.com/watch'
 	}
 
+	quota_costs = {
+		'videos.list':        {
+			'contentDetails':       2,
+			'fileDetails':          1,
+			'id':                   0,
+			'liveStreamingDetails': 2,
+			'localizations':        2,
+			'player':               0,
+			'processingDetails':    1,
+			'recordingDetails':     2,
+			'snippet':              2,
+			'statistics':           2,
+			'status':               2,
+			'suggestions':          1,
+			'topicDetails':         2
+		},
+		'playlists.list':     {
+			'contentDetails': 2,
+			'id':             0,
+			'localizations':  2,
+			'player':         0,
+			'snippet':        2,
+			'status':         2
+		},
+		'playlistItems.list': {
+			'contentDetails': 2,
+			'id':             0,
+			'snippet':        2,
+			'status':         2
+		},
+		'channels.list':      {
+			'auditDetails':        4,
+			'brandingSettings':    2,
+			'contentDetails':      2,
+			'contentOwnerDetails': 2,
+			'id':                  0,
+			'invideoPromotion':    2,  # (deprecated)
+			'localizations':       2,
+			'snippet':             2,
+			'statistics':          2,
+			'status':              2,
+			'topicDetails':        2,
+		},
+		'subscriptions.list': {
+			'contentDetails':    2,
+			'id':                0,
+			'snippet':           2,
+			'subscriberSnippet': 2
+		},
+		'comments.list':      {
+			'id':      0,
+			'snippet': 1
+		},
+		'activities.list':    {
+			'contentDetails': 2,
+			'id':             0,
+			'snippet':        2
+		}
+	}
+
 	def __init__(self, api_key = None):
 		if api_key is None:
 			self.api_key = youtube_api_key
 		else:
 			self.api_key = api_key
-	def _getParameters(self, endpoint, request_key = None, provided_parameters = None):
-		if provided_parameters is None:
-			provided_parameters = []
+
+	def _getDefaultApiParameters(self, endpoint, request_key = None, optional_parameters = None):
+		if optional_parameters is None:
+			optional_parameters = dict()
+
 		if request_key is None and endpoint != 'search':
 			raise ValueError("Request Key = '{}', kind = '{}'".format(request_key, endpoint))
-		elif endpoint == 'channels':
-			parameters = {
+
+		if not isinstance(request_key, list):
+			request_key = [request_key]
+		request_key = ','.join(request_key)
+
+		default_parameters = {
+			'channels':      {
 				'id':   request_key,
 				'part': "snippet,statistics,topicDetails"
-			}
-		elif endpoint == 'videos':
-			parameters = {
-				'id':   request_key,
-				'part': 'snippet,contentDetails,statistics,topicDetails'
-			}
-		elif endpoint == 'playlists':
-			parameters = {
+			},
+
+			'playlists':     {
 				'id':         request_key,
 				'maxResults': '50',
 				'part':       "snippet,contentDetails"
-			}
-		elif endpoint == 'playlistItems':
-			parameters = {
+			},
+
+			'playlistItems': {
 				'playlistId': request_key,
 				'maxResults': '50',
 				'part':       'snippet'
-			}
-		elif len(provided_parameters) != 0:
-			parameters = provided_parameters
-		else:
-			parameters = None
+			},
 
-		if parameters is None:
-			error_info = {
-				'errorMessage': "Cannot properly set the parameters.",
-				'inFunction':   "ApiResponse._getParameters",
-				'input':        {
-					'kind':                endpoint,
-					'request_key':         request_key,
-					'provided_parameters': provided_parameters
-				},
-				'parameters':   parameters
+			'videos':        {
+				'id':   request_key,
+				'part': 'snippet,contentDetails,statistics,topicDetails'
 			}
-			pprint(error_info)
-			raise NotImplementedError
+		}
+		parameters = default_parameters.get(endpoint)
+
+		if parameters:
+			parameters.update(optional_parameters)
 
 		return parameters
-
 
 	def _getChannelItems(self, key):
 		search_parameters = {
@@ -81,6 +133,12 @@ class YouTube:
 		search_response = self.search(**search_parameters)
 		return search_response
 
+	def calculateQuota(self, endpoint, parts):
+		base_cost = 1
+
+		method_costs = self.quota_costs[endpoint + '.list']
+		base_cost += sum([v for k, v in method_costs if k in parts])
+		return base_cost
 
 	def getChannelItems(self, channel_id, **kwargs):
 		parameters = {
@@ -123,7 +181,7 @@ class YouTube:
 	def getPlaylistItems(self, playlist_id, **kwargs):
 
 		verbose = kwargs.get('verbose')
-		parameters = self._getParameters('playlistItems', playlist_id)
+		parameters = self._getDefaultApiParameters('playlistItems', playlist_id)
 		if 'part' in kwargs:
 			parameters['part'] = kwargs['part']
 
@@ -141,8 +199,8 @@ class YouTube:
 
 			playlist_items += page_items
 			if verbose:
-				#string = "{}\t{} of {}\t{}".format(index, len(playlist_items), total_items, next_page_token)
-				#print(string)
+				# string = "{}\t{} of {}\t{}".format(index, len(playlist_items), total_items, next_page_token)
+				# print(string)
 				if progress_bar is None:
 					progress_bar = ProgressBar(max_value = int(total_items))
 				progress_bar.update(len(playlist_items))
@@ -152,7 +210,7 @@ class YouTube:
 			else:
 				break
 
-		#result = list(ApiResponse(i) for i in api_response.json().get('items', []))
+		# result = list(ApiResponse(i) for i in api_response.json().get('items', []))
 		result = [ApiResponse(i) for i in playlist_items]
 		result = list(i for i in result if i)
 		return result
@@ -174,6 +232,9 @@ class YouTube:
 		url = self.endpoints[endpoint]
 		parameters['key'] = self.api_key
 		response = requests.get(url, params = parameters)
+		status_code = response.status_code
+		response = response.json()
+		response['statusCode'] = status_code
 
 		return response
 
@@ -192,7 +253,7 @@ class YouTube:
 
 		"""
 		if not endpoint.endswith('s'): endpoint += 's'
-		parameters = self._getParameters(endpoint, key)
+		parameters = self._getDefaultApiParameters(endpoint, key)
 
 		response = self.request(endpoint, **parameters)
 
@@ -225,4 +286,3 @@ class YouTube:
 				break
 		response['items'] = items
 		return response
-

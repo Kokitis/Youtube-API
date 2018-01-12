@@ -22,5 +22,5 @@ if __name__ == '__main__':
 	
 	if True:
 		#subscriptions = {k:v for k,v in subscriptions.items() if v == test_channel}
-		widgets.importSubscriptions(youtube, subscriptions, start_index = 60)
+		widgets.importSubscriptions(youtube, subscriptions, start_index = 0)
 

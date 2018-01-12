@@ -201,8 +201,9 @@ class YouTubeDatabase:
 
 		metrics = list()
 		progress_bar = progressbar.ProgressBar(max_value = len(channel_items))
-		for index, item in enumerate(channel_items):
+		for index, element in enumerate(channel_items):
 			progress_bar.update(index)
+			item = element.toStandard()
 			item_kind = item['itemKind']
 			item_id = item['itemId']
 
@@ -248,7 +249,7 @@ class YouTubeDatabase:
 			self.importPlaylistItem(item, playlist_entity, channel = channel)
 		return playlist_entity
 
-	def importPlaylistItem(self, item, playlist, channel):
+	def importPlaylistItem(self, item, channel):
 
 		item_standard = item.toStandard()
 		item_kind = item_standard['itemKind']
