@@ -22,6 +22,7 @@ class ApiResponse:
 			api_response = api_response.json()
 			api_response['statusCode'] = status_code
 
+		api_response = self._decodeResponse(api_response)
 		self._parseResponse(api_response)
 
 	def __bool__(self):
@@ -83,6 +84,8 @@ class ApiResponse:
 
 		return endpoint
 
+	def _decodeResponse(self, api_response):
+		pass
 	def _parseResponse(self, api_response):
 
 		# Parse Single Entity
