@@ -246,7 +246,8 @@ class YouTubeDatabase:
 		playlist_items = self.api.getPlaylistItems(playlist_entity.id)
 
 		for item in playlist_items:
-			self.importPlaylistItem(item, playlist_entity, channel = channel)
+			playlist_item = self.importPlaylistItem(item, channel = channel)
+			playlist_entity.videos.add(playlist_item)
 		return playlist_entity
 
 	def importPlaylistItem(self, item, channel):

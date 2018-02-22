@@ -21,8 +21,6 @@ def importSubscriptions(youtube, subscriptions, whitelist = None, start_index = 
 	all_metrics = list()
 	database_name = os.path.basename(youtube.filename)
 	metrics_filename = os.path.join(os.path.dirname(youtube.filename), database_name + '_import_metrics.xlsx')
-	index = 0
-	# pprint(subscriptions)
 
 	for index, element in enumerate(sorted(subscriptions.items())):
 		if index < start_index:

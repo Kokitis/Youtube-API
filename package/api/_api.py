@@ -1,7 +1,11 @@
 import requests
-from progressbar import ProgressBar
 
-from ._api_response import ApiResponse
+from functools import partial
+from pprint import pprint
+from .resources import *
+
+pprint = partial(pprint, width = 180)
+
 from ..github import youtube_api_key
 
 
@@ -82,15 +86,14 @@ class YouTube:
 		else:
 			self.api_key = api_key
 
-	def _getDefaultApiParameters(self, endpoint, request_key = None, optional_parameters = None):
-		if optional_parameters is None:
-			optional_parameters = dict()
-
+	@staticmethod
+	def getDefaultApiParameters(endpoint, request_key, **optional_parameters):
 		if request_key is None and endpoint != 'search':
 			raise ValueError("Request Key = '{}', kind = '{}'".format(request_key, endpoint))
 
 		if not isinstance(request_key, list):
 			request_key = [request_key]
+
 		request_key = ','.join(request_key)
 
 		default_parameters = {
@@ -116,22 +119,11 @@ class YouTube:
 				'part': 'snippet,contentDetails,statistics,topicDetails'
 			}
 		}
-		parameters = default_parameters.get(endpoint)
-
-		if parameters:
+		parameters = default_parameters[endpoint]
+		if optional_parameters:
 			parameters.update(optional_parameters)
 
 		return parameters
-
-	def _getChannelItems(self, key):
-		search_parameters = {
-			'key':        self.api_key,
-			'part':       'id,snippet',
-			'channelId':  key,
-			'maxResults': '50'
-		}
-		search_response = self.search(**search_parameters)
-		return search_response
 
 	def calculateQuota(self, endpoint, parts):
 		base_cost = 1
@@ -145,83 +137,41 @@ class YouTube:
 			'id':   channel_id,
 			'part': 'contentDetails'
 		}
+		channel_response = self.get('channels', channel_id, **parameters)
 
-		channel_response = self.request('channels', **parameters)
-		channel_response = channel_response.json()
-		channel_response = channel_response['items'][0]
-
-		upload_playlist = channel_response['contentDetails']['relatedPlaylists']['uploads']
-
-		playlist_items = self.getPlaylistItems(upload_playlist, part = 'id,snippet', **kwargs)
-
-		channel_items = list()
-		for element in playlist_items:
-			"""
-			item_snippet = item['snippet']
-			item_kind = item['id']['kind'].split('#')[1]
-			item_id = item['id'][item_kind + 'Id']
-
-			item_name = item_snippet['title']
-			item_channel_name = item_snippet['channelTitle']
-			item_channel_id = item_snippet['channelId']
-
-			element = {
-				'itemKind':        item_kind,
-				'itemId':          item_id,
-				'itemName':        item_name,
-				'itemChannelName': item_channel_name,
-				'itemChannelId':   item_channel_id
-			}
-			"""
-
-			channel_items.append(element)
+		upload_playlist = channel_response['channelUploadPlaylist']
+		channel_items = self.get('playlistItems', upload_playlist, part = 'id,snippet', **kwargs)
 
 		return channel_items
 
-	def getPlaylistItems(self, playlist_id, **kwargs):
+	def getVideos(self, ids):
+		if not isinstance(ids[0], str):
+			ids = [i.item_id for i in ids]
+		max_page_length = 50
+		start_index = 0
+		end_index = max_page_length
 
-		verbose = kwargs.get('verbose')
-		parameters = self._getDefaultApiParameters('playlistItems', playlist_id)
-		if 'part' in kwargs:
-			parameters['part'] = kwargs['part']
+		response = None
+		while start_index < len(ids):
+			if end_index >= len(ids): end_index = len(ids)
 
-		playlist_items = list()
-		index = 0
-		progress_bar = None
-		while True:
-			index += 1
-			api_response = self.request('playlistItems', **parameters)
-			api_response = api_response.json()
-			total_items = api_response['pageInfo']['totalResults']
-
-			next_page_token = api_response.get('nextPageToken')
-			page_items = api_response.get('items', [])
-
-			playlist_items += page_items
-			if verbose:
-				# string = "{}\t{} of {}\t{}".format(index, len(playlist_items), total_items, next_page_token)
-				# print(string)
-				if progress_bar is None:
-					progress_bar = ProgressBar(max_value = int(total_items))
-				progress_bar.update(len(playlist_items))
-
-			if next_page_token:
-				parameters['pageToken'] = next_page_token
+			api_response = self.get('videos', ids[start_index:end_index])
+			if response is None:
+				response = api_response
 			else:
-				break
+				response.items += api_response.items
 
-		# result = list(ApiResponse(i) for i in api_response.json().get('items', []))
-		result = [ApiResponse(i) for i in playlist_items]
-		result = list(i for i in result if i)
-		return result
+			start_index += max_page_length
+			end_index += max_page_length
+		return response
 
-	def request(self, endpoint, **parameters):
+	def request(self, endpoint, key, **parameters):
 		"""
 			Sends a raw request to the Youtube Api.
 		Parameters
 		----------
-		endpoint
-		parameters
+		endpoint: str
+		key: str
 
 		Returns
 		-------
@@ -229,8 +179,12 @@ class YouTube:
 		"""
 		if not endpoint.endswith('s'):
 			endpoint += 's'
-		url = self.endpoints[endpoint]
+
+		parameters = self.getDefaultApiParameters(endpoint, key, **parameters)
 		parameters['key'] = self.api_key
+
+		url = self.endpoints[endpoint]
+
 		response = requests.get(url, params = parameters)
 		status_code = response.status_code
 		response = response.json()
@@ -238,7 +192,7 @@ class YouTube:
 
 		return response
 
-	def get(self, endpoint, key):
+	def get(self, endpoint, key, **parameters):
 		"""
 
 		Parameters
@@ -248,41 +202,23 @@ class YouTube:
 
 		Returns
 		-------
-			ApiResponse
-
+			Resource
 
 		"""
-		if not endpoint.endswith('s'): endpoint += 's'
-		parameters = self._getDefaultApiParameters(endpoint, key)
 
-		response = self.request(endpoint, **parameters)
+		response = self.request(endpoint, key, **parameters)
 
-		response = ApiResponse(response)
-
-		while response.next_page_token:
-			next_response = self.request(
-				endpoint,
-				nextPageToken = response.next_page_token,
-				**parameters
-			)
-			response.addResponse(next_response)
-
-		return response
+		response_resource = ListResource(response)
+		if response_resource.status_code != 200:
+			pprint(endpoint)
+			pprint(key)
+			pprint(parameters)
+		if response_resource.next_page_token:
+			next_page_response = self.get(endpoint, key, pageToken = response_resource.next_page_token)
+			response_resource.items += next_page_response.items
+		if len(response_resource.items) == 1:
+			response_resource = response_resource.items[0]
+		return response_resource
 
 	def search(self, **parameters):
-
-		endpoint = self.endpoints['searchs']
-		items = list()
-
-		while True:
-			response = requests.get(endpoint, params = parameters)
-			response = response.json()
-			response_items = response.get('items', [])
-			items += response_items
-			next_page_token = response.get('nextPageToken')
-			if next_page_token is not None and len(response_items) != 0:
-				parameters['pageToken'] = next_page_token
-			else:
-				break
-		response['items'] = items
-		return response
+		raise NotImplementedError
