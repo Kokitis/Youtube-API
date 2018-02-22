@@ -1,34 +1,26 @@
-from package import YouTube, YouTubeDatabase, github
-from pprint import pprint
-import pandas
+from package import YouTubeDatabase, github, widgets
+
 import os
 
-API_KEY = github.youtube_api_key
 subscriptions = github.youtube_subscriptions
 
 filename = os.path.join(os.path.dirname(__file__), "RT_video_database.sqlite")
+test_filename = os.path.join(os.path.dirname(__file__), 'test_database.sqlite')
+if os.path.exists(test_filename):
+	os.remove(test_filename)
 
 if __name__ == '__main__':
+	#print("Running Tests...")
 	test_video = "FrLgREKD4kk"
-	test_channel = "UCjdQaSJCYS4o2eG93MvIwqg"
-	test_playlist = "PL1cXh4tWqmsEQPeLEJ5V3k5knt-X9k043"
-	youtube = YouTube(API_KEY)
+	test_channel = 'UCkxctb0jr8vwa4Do6c6su0Q'
+	test_playlist = "PL1cXh4tWqmsGfdkQofe9pEbHDE7cQyJH2"
+	youtube = YouTubeDatabase(filename = test_filename)
 
-	#pprint(youtube.getChannel(subscriptions['RealLifeLore'], True))
+	#youtube.importChannel(test_channel)
+	#youtube.importPlaylist(test_playlist)
+
 	
 	if True:
-		test_database = YouTubeDatabase(youtube, filename = 'youtube_database')
-		#print("Database Filename: ", test_database.filename)
-		#pprint(subscriptions)
-		for key, value in sorted(subscriptions.items()):
+		#subscriptions = {k:v for k,v in subscriptions.items() if v == test_channel}
+		widgets.importSubscriptions(youtube, subscriptions, start_index = 0)
 
-			#if key != 'RealLifeLore': continue
-			#keys = ['Achievement Hunter', 'Funhaus', 'LetsPlay', 'Rooster Teeth']
-			#keys = ['RealLifeLore']
-			completed = [i for index, i in enumerate(subscriptions.keys()) if index <55]
-			if key not in completed:
-				test_database.importChannel(value)
-
-
-
-	

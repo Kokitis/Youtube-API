@@ -16,7 +16,7 @@ def importEntities(db):
 		dislikes = Required(int, size = 64)
 		publishDate = Required(datetime)
 		duration = Required(timedelta)
-		description = Required(str)
+		description = Optional(str, default = "Not Available")
 		#retrievedDate = Optional(timedelta)
 		channel = Required('Channel')
 		tags = Set('Tag')
@@ -29,26 +29,32 @@ def importEntities(db):
 		name = Required(str)
 		videos = Set(Video)
 		playlists = Set('Playlist')
-		country = Optional(str)
+		country = Optional(str, default = 'none', nullable = True)
 		creationDate = Optional(datetime)
 		description = Optional(str)
 		subscriberCount = Optional(int, size = 64)
 		videoCount = Optional(int)
 		viewCount = Optional(int, size = 64)
+		tags = Set('Tag')
 
 
 	class Playlist(db.Entity):
 		entity_type = 'playlist'
 		id = PrimaryKey(str)
+		itemCount = Required(int)
 		name = Required(str)
+		description = Optional(str)
 		videos = Set(Video)
 		channel = Required(Channel)
+		tags = Set('Tag')
 
 
 	class Tag(db.Entity):
 		entity_type = 'tag'
 		string = PrimaryKey(str)
 		videos = Set(Video)
+		channels = Set(Channel)
+		playlists = Set(Playlist)
 
 
 

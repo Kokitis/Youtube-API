@@ -36,18 +36,20 @@ def parseKeywords(columns, keys, cls = None, return_type = 'values', default_val
 	"""
 		Parameters
 		----------
-			columns: list<str>
-				A list of the columns in the table.
-			keys: list<str>
-				A list of the possible column names that hold the
-				desired information.
-				Ex. 'country', 'regionName', 'countryName' to 
-				extract the column with the region's name
-			return_type: {'columns', 'values'}; default 'values'
-				* 'columns': returns the column in the table that was found.
-				* 'values': returns the value contained in the column that was found.
-			cls: class(obj); default None
-				A function or class to convert the resulting values to.
+		columns: list<str>
+			A list of the columns in the table.
+		keys: list<str>
+			A list of the possible column names that hold the
+			desired information.
+			Ex. 'country', 'regionName', 'countryName' to
+			extract the column with the region's name
+		return_type: {'columns', 'values'}; default 'values'
+			* 'columns': returns the column in the table that was found.
+			* 'values': returns the value contained in the column that was found.
+		cls: class(obj); default None
+			A function or class to convert the resulting values to.
+		default_value: scalar; default None
+			The default value to return.
 	"""
 
 	if hasattr(columns, 'keys'):
@@ -91,13 +93,11 @@ def parseEntityArguments(entity_type, entity_args = None, **kwargs):
 	"""
 		Parameters
 		----------
-			entity_type: {'channel', 'playlist', 'tag', 'video'}
+			entity_type: Entity, {'channel', 'playlist', 'tag', 'video'}
 			entity_args: dict<str:scalar>
 
 	"""
-	#print("Before parsing:")
-	#for k, v in sorted(entity_args.items()):
-	#	print("\t{}:\t{}".format(k, v))
+
 	if entity_args is None:
 		result = kwargs
 	else:
@@ -116,15 +116,15 @@ def parseEntityArguments(entity_type, entity_args = None, **kwargs):
 		args = {
 			'id': parseKeywords(result, ['videoId', 'id']),
 			'name': parseKeywords(result, ['videoName', 'name', 'title']),
-			'views': parseKeywords(result, ['views', 'viewCount'], int),
-			'likes': parseKeywords(result, ['likes', 'likeCount'], int),
-			'dislikes': parseKeywords(result, ['dislikes', 'dislikeCount'], int),
-			'publishDate': parseKeywords(result, ['publishDate', 'publishedAt'], timetools.Timestamp),
-			'duration': parseKeywords(result, ['duration', 'length']),
+			'views': parseKeywords(result, ['views', 'viewCount', 'videoViewCount'], int),
+			'likes': parseKeywords(result, ['likes', 'likeCount', 'videoLikeCount'], int),
+			'dislikes': parseKeywords(result, ['dislikes', 'dislikeCount', 'videoDislikeCount'], int),
+			'publishDate': parseKeywords(result, ['publishDate', 'publishedAt', 'videoPublishDate'], timetools.Timestamp),
+			'duration': parseKeywords(result, ['duration', 'length', 'videoDuration']),
 			#'updatedAt': "",
 			'channel': parseKeywords(result, ['channel']),
 			'description': parseKeywords(result, ['description', 'videoDescription']),
-			'tags': parseKeywords(result, ['tags'])
+			'tags': parseKeywords(result, ['tags', 'videoTags'])
 		}
 		if args['duration'] is not None:
 			args['duration'] = timetools.Duration(args['duration'])
@@ -210,11 +210,13 @@ def validateEntity(entity_type, **data):
 
 
 	if not valid:
+		print("[validateEntity] The entity had one or more errors:")
 		print("Entity Type: ", entity_type)
 		print()
 		for key, value in sorted(validation.items()):
-			a = value[0] if not value[1] else ""
-			print(key, '\t', a, '\t', value[1])
+			if value[1]: continue
+			a = value[0]
+			print('\t', key, '\t', a, '\t', value[1])
 	
 	return valid
 

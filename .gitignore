@@ -8,6 +8,7 @@ __pycache__/
 
 # Other
 *.sqlite
+*.sqlite-journal
 .idea/
 
 # Distribution / packaging
@@ -141,3 +142,5 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+*.xlsx

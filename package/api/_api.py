@@ -1,427 +1,224 @@
 import requests
+
+from functools import partial
 from pprint import pprint
-    
+from .resources import *
+
+pprint = partial(pprint, width = 180)
+
+from ..github import youtube_api_key
+
 
 class YouTube:
-    endpoints = {
-        'videos': 'https://www.googleapis.com/youtube/v3/videos',
-        'searchs': 'https://www.googleapis.com/youtube/v3/search',
-        'channels': 'https://www.googleapis.com/youtube/v3/channels',
-        'playlists': 'https://www.googleapis.com/youtube/v3/playlists',
-        'playlistItems': 'https://www.googleapis.com/youtube/v3/playlistItems',
-        'activities': 'https://www.googleapis.com/youtube/v3/activities',
-        'watch': 'http://www.youtube.com/watch'
-    }
+	endpoints = {
+		'videos':        'https://www.googleapis.com/youtube/v3/videos',
+		'searchs':       'https://www.googleapis.com/youtube/v3/search',
+		'channels':      'https://www.googleapis.com/youtube/v3/channels',
+		'playlists':     'https://www.googleapis.com/youtube/v3/playlists',
+		'playlistItems': 'https://www.googleapis.com/youtube/v3/playlistItems',
+		'activities':    'https://www.googleapis.com/youtube/v3/activities',
+		'watch':         'http://www.youtube.com/watch'
+	}
 
-    def __init__(self, api_key):
-        self.api_key = api_key
-        self.attempts = 5
-        self.errors = list()
+	quota_costs = {
+		'videos.list':        {
+			'contentDetails':       2,
+			'fileDetails':          1,
+			'id':                   0,
+			'liveStreamingDetails': 2,
+			'localizations':        2,
+			'player':               0,
+			'processingDetails':    1,
+			'recordingDetails':     2,
+			'snippet':              2,
+			'statistics':           2,
+			'status':               2,
+			'suggestions':          1,
+			'topicDetails':         2
+		},
+		'playlists.list':     {
+			'contentDetails': 2,
+			'id':             0,
+			'localizations':  2,
+			'player':         0,
+			'snippet':        2,
+			'status':         2
+		},
+		'playlistItems.list': {
+			'contentDetails': 2,
+			'id':             0,
+			'snippet':        2,
+			'status':         2
+		},
+		'channels.list':      {
+			'auditDetails':        4,
+			'brandingSettings':    2,
+			'contentDetails':      2,
+			'contentOwnerDetails': 2,
+			'id':                  0,
+			'invideoPromotion':    2,  # (deprecated)
+			'localizations':       2,
+			'snippet':             2,
+			'statistics':          2,
+			'status':              2,
+			'topicDetails':        2,
+		},
+		'subscriptions.list': {
+			'contentDetails':    2,
+			'id':                0,
+			'snippet':           2,
+			'subscriberSnippet': 2
+		},
+		'comments.list':      {
+			'id':      0,
+			'snippet': 1
+		},
+		'activities.list':    {
+			'contentDetails': 2,
+			'id':             0,
+			'snippet':        2
+		}
+	}
 
-    def getChannel(self, key, raw = False):
-        parameters = {
-            'id': key,
-            'key': self.api_key,
-            'part': "snippet,statistics,topicDetails"
-        }
-        response = self.request('channels', **parameters)
-        if raw:
-            return response
-        channel_items = list()
-        if isinstance(response, dict) and 'items' in response:
-            for item in response['items']:
-                channel_response = self._parseChannelData(item)
-                if channel_response is not None:
-                    channel_items.append(channel_response)
-        elif response is None:
-            pass
-        else:
-            message = "'items' was not found in the response"
-            pprint(response)
-            raise KeyError(message)
-        
-        if len(channel_items) == 0:
-            result = None 
-        elif len(channel_items) == 1:
-            result = channel_items[0]
-        else:
-            result = channel_items
-        return result
+	def __init__(self, api_key = None):
+		if api_key is None:
+			self.api_key = youtube_api_key
+		else:
+			self.api_key = api_key
 
-    def getChannelElements(self, key, kind = None):
-        """ Retrieves a list of all components on a given channel. 
-            Parameters
-            ----------
-                key: str
-                    The channel id
-                kind: {'youtube#videos', 'video'}; default None
-            Returns
-            -------
-            items: list<dict<>>
-                A list of dict with the keys 'itemId' and 'itemKind'. 
-                'itemKind' is one of {'youTube#video', 'youtube#playlist', 'youtube#channel'}        
-        """
+	@staticmethod
+	def getDefaultApiParameters(endpoint, request_key, **optional_parameters):
+		if request_key is None and endpoint != 'search':
+			raise ValueError("Request Key = '{}', kind = '{}'".format(request_key, endpoint))
 
-        #https://www.googleapis.com/youtube/v3/search?key={your_key_here}&channelId={channel_id_here}&part=snippet,id&order=date&maxResults=20]
+		if not isinstance(request_key, list):
+			request_key = [request_key]
 
-        parameters = {
-            'key': self.api_key,
-            'part': 'id',
-            'channelId': key,
-            'maxResults': '50'
-        }
-        items = list()
-        while True:
-            response = self.request('search', **parameters)
-            if response is not None:
-                for item in response['items']:
-                    item_details = item['id']
-                    
-                    items.append({
-                        'itemId': item_details[item_details['kind'].split('#')[1] + 'Id'],
-                        'itemKind': item_details['kind']
-                    })
+		request_key = ','.join(request_key)
 
-                if 'nextPageToken' not in response.keys() or len(items) == 0:
-                    break 
-                else:
-                    parameters['pageToken'] = response['nextPageToken']
-            else:
-                break
-        
-        if kind is not None:
-            items = [item for item in items if item['kind'] == 'kind']
-        
-        return items
+		default_parameters = {
+			'channels':      {
+				'id':   request_key,
+				'part': "snippet,statistics,topicDetails"
+			},
 
-    
+			'playlists':     {
+				'id':         request_key,
+				'maxResults': '50',
+				'part':       "snippet,contentDetails"
+			},
 
-    def _parseChannelData(self, response, ignore_errors = True):
-        
-        response = self._validateApiResponse('channel', response)
-        channel_id = response['id']
-        snippet = response['snippet']
-        statistics = response['statistics']
+			'playlistItems': {
+				'playlistId': request_key,
+				'maxResults': '50',
+				'part':       'snippet'
+			},
 
-        is_valid = response['isValid']
-        if is_valid:
-            try: 
-                result = {
-                    # snippet
-                    'channelName': snippet['title'],
-                    'channelId': channel_id,
-                    'country': snippet.get('country'),
-                    'description': snippet['description'],
-                    #'creationDate': snippet['publishedAt'],
+			'videos':        {
+				'id':   request_key,
+				'part': 'snippet,contentDetails,statistics,topicDetails'
+			}
+		}
+		parameters = default_parameters[endpoint]
+		if optional_parameters:
+			parameters.update(optional_parameters)
 
-                    # statistics
-                    'subscriberCount': statistics['subscriberCount'],
-                    'videoCount': statistics['videoCount'],
-                    'viewCount': statistics['viewCount'],
+		return parameters
 
-                    # topics
-                    #'topicIds': topic_details['topicIds'],
-                    #'topicCategories': topic_details['topicCategories'],
-                    'tags': []
-                }
-                if snippet['title'] == 'YouTube Spotlight':
-                    result = None 
-                else:
-                    result['creationDate'] = snippet['publishedAt']
-            except Exception as exception:
-                print("\nSnippet\n")
-                pprint(snippet)
-                print("\nStatistics\n")
-                pprint(statistics)
-                raise exception
-        elif ignore_errors:
-            result = None 
-        else:
-            message = "Channel Api response was invalid!"
-            raise ValueError(message)
+	def calculateQuota(self, endpoint, parts):
+		base_cost = 1
 
-        return result
+		method_costs = self.quota_costs[endpoint + '.list']
+		base_cost += sum([v for k, v in method_costs if k in parts])
+		return base_cost
 
-    def getPlaylist(self, key):
-        playlist_parameters = {
-            'id': key,
-            'key': self.api_key,
-            'part': "snippet"
-        }
-        playlist_response = self.request('playlists', **playlist_parameters)
+	def getChannelItems(self, channel_id, **kwargs):
+		parameters = {
+			'id':   channel_id,
+			'part': 'contentDetails'
+		}
+		channel_response = self.get('channels', channel_id, **parameters)
 
-        items = list()
-        while True:
-            playlist_items_parameters = {
-                'key': self.api_key,
-                'playlistId': key,
-                'maxResults': '50',
-                'part': 'snippet'
-            }
-            response = self.request('playlistItems', **playlist_items_parameters)
-            if response is not None:
-                next_page_token = response.get('nextpageToken')
-                items += response['items']
-            else:
-                pass
-            if next_page_token is None or len(response['items']) == 0:
-                break
-            else:
-                playlist_items_parameters['pageToken'] = next_page_token
-            
-        playlist_response = self._parsePlaylistData(playlist_response, items)
-        return playlist_response
+		upload_playlist = channel_response['channelUploadPlaylist']
+		channel_items = self.get('playlistItems', upload_playlist, part = 'id,snippet', **kwargs)
 
-    def _parsePlaylistData(self, playlist, playlist_items):
+		return channel_items
 
-        items = [self._parsePlaylistItemData(item) for item in playlist_items]
-        playlist_id = playlist['items'][0]['id']
-        playlist_snippet = playlist['items'][0]['snippet']
+	def getVideos(self, ids):
+		if not isinstance(ids[0], str):
+			ids = [i.item_id for i in ids]
+		max_page_length = 50
+		start_index = 0
+		end_index = max_page_length
 
-        playlist_response = {
-            'playlistName': playlist_snippet['title'],
-            'playlistId': playlist_id,
-            'channelId': playlist_snippet['channelId'],
-            'channelName': playlist_snippet['channelTitle'],
-            'description': playlist_snippet['description'],
-            'items': items
-        }
-        return playlist_response
+		response = None
+		while start_index < len(ids):
+			if end_index >= len(ids): end_index = len(ids)
 
-    @staticmethod
-    def _parsePlaylistItemData(response):
-        playlist_item_id = response['id']
-        snippet = response['snippet']
-        # content_details = response['contentDetails']
-        result = {
-            'playlistItemId': playlist_item_id,
-            'playlistId': snippet['playlistId'],
-            'kind': snippet['resourceId']['kind'],
-            'videoId': snippet['resourceId']['videoId'],
-            'description': snippet['description']
-        }
-        return result
+			api_response = self.get('videos', ids[start_index:end_index])
+			if response is None:
+				response = api_response
+			else:
+				response.items += api_response.items
 
-    def getVideo(self, key):
+			start_index += max_page_length
+			end_index += max_page_length
+		return response
 
-        parameters = {
-            'id': key,
-            'key': self.api_key
-        }
-        response = self.request('videos', part='snippet,statistics,contentDetails,topicDetails', **parameters)
-        
-        items = list()
-        if response is not None:
-            for item in response['items']:
-                video_response = self._parseVideoData(item)
-                if video_response is not None:
-                    items.append(video_response)
-        else:
-            response = []
-        
-        if len(items) == 0:     result = None 
-        elif len(items) == 1:   result = items[0]
-        else:                   result = items
+	def request(self, endpoint, key, **parameters):
+		"""
+			Sends a raw request to the Youtube Api.
+		Parameters
+		----------
+		endpoint: str
+		key: str
 
-        return result
-    @staticmethod
-    def _generateValidatedApiResponse(response, keys, key_types):
-        if not isinstance(key_types, list):
-            key_types = [key_types] * len(keys)
-        _result = dict()
-        for key, key_type in zip(keys, key_types):
-            value = response.get(key)
-            try:
-                value = key_type(value)
-            except Exception as exception:
-                pass
-            _result[key] = (value, isinstance(value, key_type))
-        return _result
-    def _validateApiResponse(self, kind, response):
+		Returns
+		-------
 
-        _checkIfValid = lambda a, b: all(a[k][1] for k in b)
+		"""
+		if not endpoint.endswith('s'):
+			endpoint += 's'
 
-        response_id = response['id']
-        if kind == 'video':
-            snippet_keys = [
-                'videoName', 'videoId', 'channelId', 'channelTitle', 
-                'description', 'defaultAudioLanguage', 'liveBroadcastContent'
-                ]
-            snippet_types = str
-            required_snippet_keys = ['videoName', 'videoId', 'channelId', 'channelTitle', 'description']
+		parameters = self.getDefaultApiParameters(endpoint, key, **parameters)
+		parameters['key'] = self.api_key
 
-            statistics_keys = ['likeCount', 'dislikeCount', 'commentCount', 'favoriteCount', 'viewCount']
-            statistics_types = int
-            required_statistics_keys = ['likeCount', 'dislikeCount', 'viewCount']
+		url = self.endpoints[endpoint]
 
-            content_details_keys = ['duration']
-            content_details_types = str
-            required_content_details_keys = ['duration']
+		response = requests.get(url, params = parameters)
+		status_code = response.status_code
+		response = response.json()
+		response['statusCode'] = status_code
 
-        elif kind == 'channel':
-            snippet_keys = ['title', 'country', 'description', 'publishedAt']
-            snippet_types = str
-            required_snippet_keys = ['title', 'publishedAt']
+		return response
 
-            statistics_keys = ['viewCount', 'videoCount', 'subscriberCount']
-            required_statistics_keys = statistics_keys
-            statistics_types = int
+	def get(self, endpoint, key, **parameters):
+		"""
 
-            content_details_keys = None
-            content_details_types = None
-            required_content_details_keys = None
-        else:
-            raise NotImplementedError
+		Parameters
+		----------
+		endpoint: {'channels', 'playlists', 'videos'}
+		key: str
 
-        snippet = response.get('snippet')
-        statistics = response.get('statistics')
-        content_details = response.get('contentDetails')
-        topic_details = response.get('topicDetails', dict())
+		Returns
+		-------
+			Resource
 
-        # Validate Snippet
+		"""
 
-        if snippet and snippet_keys:
-            validated_snippet = self._generateValidatedApiResponse(snippet, snippet_keys, snippet_types)
+		response = self.request(endpoint, key, **parameters)
 
-            snippet_is_valid = _checkIfValid(validated_snippet, required_snippet_keys)
-        else:
-            validated_snippet = None
-            snippet_is_valid = False
-        
-        # Validate Statistics
+		response_resource = ListResource(response)
+		if response_resource.status_code != 200:
+			pprint(endpoint)
+			pprint(key)
+			pprint(parameters)
+		if response_resource.next_page_token:
+			next_page_response = self.get(endpoint, key, pageToken = response_resource.next_page_token)
+			response_resource.items += next_page_response.items
+		if len(response_resource.items) == 1:
+			response_resource = response_resource.items[0]
+		return response_resource
 
-        if statistics and statistics_keys:
-            validated_statistics = self._generateValidatedApiResponse(statistics, statistics_keys, statistics_types)
-            statistics_is_valid = _checkIfValid(validated_statistics, required_statistics_keys)
-        else:
-            validated_statistics = None
-            statistics_is_valid = False
-        
-        # Validate ContentDetails
-        if content_details and content_details_keys:
-            validated_content_details = self._generateValidatedApiResponse(content_details, content_details_keys, content_details_types)
-            content_details_is_valid = _checkIfValid(validated_content_details, required_content_details_keys)
-        else:
-            validated_content_details = None
-            content_details_is_valid = False
-
-
-
-        if kind == 'video':
-            tags = snippet.get('tags', [])
-            tags += topic_details.get('topicCategories', [])
-            tags += topic_details.get('relevantTopicDetails', [])
-            is_valid = snippet_is_valid and statistics_is_valid and content_details_is_valid
-        elif kind == 'channel':
-            tags = []
-            is_valid = snippet_is_valid and statistics_is_valid
-        else:
-            tags = []
-            is_valid  = False
-
-        tags = [str(i).lower() for i in tags]
-
-        result = {
-            'id': response_id,
-            'tags': tags,
-            'isValid': is_valid,
-            'snippet': snippet,
-            'statistics': statistics,
-            'contentDetails': content_details,
-            'topicDetails': topic_details
-        }
-        return result
-
-
-    def _parseVideoData(self, video_response, ignore_errors = True):
-        """
-            Returns
-            -------
-
-        """
-        validated_response = self._validateApiResponse('video', video_response)
-
-        video_id = validated_response['id']
-        snippet = validated_response['snippet']
-        statistics = validated_response['statistics']
-        content_details = validated_response['contentDetails']
-        tags = validated_response['tags']
-        is_valid = validated_response['isValid']
-
-        if is_valid:
-            result = {
-                # snippet
-                'videoName': snippet['title'],
-                'videoId': video_id,
-                'channelId': snippet['channelId'],
-                'channelTitle': snippet['channelTitle'],
-                'defaultAudioLanguage': snippet.get('defaultAudioLanguage', 'n/a'),
-                'description': snippet['description'],
-                'liveBroadcastContent': snippet['liveBroadcastContent'],
-                'publishDate': snippet['publishedAt'],
-                'retrievalDate': "",
-                'tags': tags,
-
-                # statistics
-                'likeCount': statistics.get('likeCount', 0),
-                'dislikeCount': statistics.get('dislikeCount', 0),
-                'commentCount': statistics.get('commentCount', 0),
-                'viewCount': statistics['viewCount'],
-                'favoriteCount': statistics['favoriteCount'],
-
-                # content details
-                'duration': content_details['duration']
-            }
-        else:
-            if ignore_errors:
-                result = None 
-            else:
-                message = "There was an error when parsing the raw video api resopnse."
-                print("\nVideo Id\n")
-                print(video_id)
-                print("\nsnippet\n")
-                pprint(snippet)
-                print("\nstatistics\n")
-                pprint(statistics)
-                print("\nContent Details\n")
-                pprint(content_details)
-                raise ValueError(message)
-
-        return result
-
-    def request(self, endpoint, **parameters):
-        if not endpoint.endswith('s'): endpoint += 's'
-        base_url = self.endpoints[endpoint]
-
-        try:
-            response = requests.get(base_url, params=parameters).json()
-        except Exception as exception:
-            print(str(exception))
-            response = {'code': 404}
-
-        error_response = response.get('error')
-        if error_response:
-            
-            error_code = error_response['code']
-            if error_code == 503: # Common backen error
-                response = None 
-            elif error_code == 403:
-                pprint(error_response)
-                message = "Daily Usage limit reached!"
-                raise ValueError(message)
-            else:
-                response = None
-        return response
-
-    def calculateQuotaCost(endpoint, **parameters):
-        pass
-
-    def get(self, kind, key):
-        if kind == 'channel':
-            return self.getChannel(key)
-        elif kind == 'playlist':
-            return self.getPlaylist(key)
-        elif kind == 'tag':
-            return {'string': key}
-        elif kind == 'video':
-            return self.getVideo(key)
+	def search(self, **parameters):
+		raise NotImplementedError
