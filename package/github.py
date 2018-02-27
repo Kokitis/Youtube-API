@@ -16,4 +16,4 @@ from github_data import youtube_subscriptions, youtube_api_key
 
 # Common package settings
 
-DATA_FOLDER = os.path.join(os.path.dirname(__file__), "data")
+DATA_FOLDER:str = os.path.join(os.path.dirname(__file__), "data")

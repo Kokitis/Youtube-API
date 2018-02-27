@@ -11,6 +11,10 @@ def importSubscriptions(youtube, subscriptions, whitelist = None, start_index = 
 	----------
 	youtube: YoutubeDatabase
 	subscriptions: dict
+	whitelist: list
+		overrides 'subscriptions'
+	start_index: int; default 0
+		The index to start at.
 
 	Returns
 	-------

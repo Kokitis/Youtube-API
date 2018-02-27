@@ -1,37 +1,47 @@
-
 import os
 from pprint import pprint
 from functools import partial
-pprint = partial(pprint, width = 200)
-from pony.orm import Database, db_session 
-import progressbar
 
-from .._entities import importEntities
+pprint = partial(pprint, width = 200)
+from pony.orm import Database, db_session
+
+
+from ._database_entities import importEntities
 from ..github import DATA_FOLDER
-from .validation import parseEntityArguments
-from .. import YouTube
+
+from ..api import *
+from typing import Union, List, Any
+from progressbar import ProgressBar
+
 
 def formatErrorMessage(message, exception, *args, **kwargs):
 	error_message = {
-		'exception': str(exception),
+		'exception':     str(exception),
 		'exceptionType': type(exception),
-		'message': message,
-		'args': args,
-		'kwargs': kwargs
+		'message':       message,
+		'args':          args,
+		'kwargs':        kwargs
 	}
 	return error_message
 
-class YouTubeDatabase:
-	def __init__(self, api_key = None, filename = None):
-		
-		self.api = YouTube(api_key)
+
+class YoutubeDatabase:
+	def __init__(self, api_key: Union[str, YouTube] = None, filename: str = None):
+		if isinstance(api_key, str):
+			self.api = YouTube(api_key)
+		else:
+			self.api = api_key
+
+		self.Channel = None
+		self.Playlist = None
+		self.PlaylistItem = None
+		self.Video = None
+		self.Tag = None
+
 		self._initializeDatabase(filename)
 
 
-	def callApi(self, kind, key):
-		return self.api.get(kind, key)
-
-	def _initializeDatabase(self, filename):
+	def _initializeDatabase(self, filename: str):
 
 		if filename is None:
 			filename = os.path.join(DATA_FOLDER, 'youtube_database.sqlite')
@@ -45,81 +55,93 @@ class YouTubeDatabase:
 		self._db = Database()
 		self._db.bind(provider = 'sqlite', filename = self.filename, create_db = True)
 
-		self.Channel, self.Playlist, self.Tag, self.Video = importEntities(self._db)
+		entities = importEntities(self._db)
+		self.Channel = entities['channel']
+		self.Playlist = entities['playlist']
+		self.PlaylistItem = entities['playlistItem']
+		self.Video = entities['video']
+		self.Tag = entities['tag']
+
 		self._db.generate_mapping(create_tables = True)
 
-	def _getEntityClass(self, kind):
+	def _getEntityClass(self, kind: Any):
+		if not isinstance(kind, str):
+			kind = kind['resourceType']
+		if '#' not in kind: kind = 'youtube#' + kind
+
+		kind = kind.split('#')[-1]
 		if kind.endswith('s'):
 			kind = kind[:-1]
-		if kind == 'channel':
-			return self.Channel 
-		elif kind == 'playlist':
-			return self.Playlist 
-		elif kind == 'tag':
-			return self.Tag 
-		elif kind == 'video':
+
+		if kind == 'channel' or kind == 'youtube#channel':
+			return self.Channel
+		elif kind == 'playlist' or kind == 'youtube#playlist':
+			return self.Playlist
+		elif kind == 'tag' or kind == 'youtube#tag':
+			return self.Tag
+		elif kind == 'video' or kind == 'youtube#Video':
 			return self.Video
+		elif kind == 'playlistItem' or kind == 'youtube#playlistItem':
+			return self.PlaylistItem
 		else:
 			message = "'{}' is not a valid entity type!".format(kind)
 			raise ValueError(message)
 
-	def retrieveEntityFromDatabase(self, kind, key, api_response = None, **kwargs):
-		"""
-
-		Parameters
-		----------
-		kind
-		key
-		api_response: ApiResponse
-		kwargs
-
-		Returns
-		-------
-
-		"""
-		entity_class = self._getEntityClass(kind)
-		# Check if an enity id was given.
-		if not key:
-			if api_response:
-				key = api_response.id
-			else:
-				key = kwargs.get('id', kwargs.get('itemId'))
-
-		if key:
-			result = entity_class.get(id = key)
+	@db_session
+	def insertItemIntoDatabase(self, items: ListResource, show:bool=False)->List:
+		new_entities = list()
+		if show:
+			pbar = ProgressBar(max_value = len(items))
 		else:
-			# Use entity.get()
-			arguments = self._cleanArguments(kind, **kwargs)
-			result = entity_class.get(**arguments)
-
-		return result
-
-
-	def addEntityToDatabase(self, kind, api_response, **kwargs):
-		try:
-			sql_entity_attributes = api_response.toSqlEntity(**kwargs)
-
-			entity_tags = sql_entity_attributes.pop('tags')
-			result = self._insertEntity(kind, **sql_entity_attributes)
-			self.addTagsToEntity(result, entity_tags)
-		except ValueError:
-			result = None
-		return result
+			pbar = None
+		for index, item in enumerate(items):
+			if show:
+				pbar.update(index)
 
 
-	def addTagsToEntity(self, entity, tags):
-		"""
-			Adds tags to an entity in the database.
-		Parameters
-		----------
-		entity
-		tags
+			sql_arguments: Dict = item.toDict(to_sql = True)
+			item_type = sql_arguments.pop('resourceType')
+			item_already_exists = self.exists(item_type, sql_arguments['resourceId'])
+			if item_already_exists:
+				continue
+			#sql_arguments.pop('itemType')
 
-		Returns
-		-------
+			if item_type == 'youtube#video' or item_type == 'youtube#playlist':
+				if 'channelId' not in sql_arguments:
+					pprint(sql_arguments)
+				channel_id = sql_arguments.pop('channelId')
+				channel_entity = self.get('youtube#channel', channel_id, item_type = 'entity')
+				sql_arguments['channel'] = channel_entity
 
-		"""
-		if not hasattr(entity, 'tags'): return None
+
+			elif item_type == 'youtube#playlistItem':
+				playlist_id = sql_arguments.pop('playlistId')
+				video_id = sql_arguments['itemId']
+				video_entity = self.get('youtube#video', video_id, item_type = 'entity')
+				playlist_entity = self.get('youtube#playlist', playlist_id, item_type = 'entity')
+				sql_arguments['playlist'] = playlist_entity
+				sql_arguments['video'] = video_entity
+			if item_type == 'youtube#video':
+				tag_list = sql_arguments.pop('videoTags')
+			elif item_type == 'youtube#playlist':
+				tag_list = sql_arguments.pop('playlistTags')
+			else:
+				tag_list = []
+
+			entity_class = self._getEntityClass(item)
+
+			try:
+				item_entity = entity_class(**sql_arguments)
+				self.addTags(item_entity, tag_list)
+				new_entities.append(item_entity)
+			except Exception as exception:
+				error_message = formatErrorMessage("Invalid Keys", exception, items, sql_arguments)
+				pprint(error_message)
+				raise ValueError
+		return new_entities
+
+	@db_session
+	def addTags(self, entity, tags:List[str]):
 		for tag in tags:
 			t = self.Tag.get(string = tag)
 			if t is None:
@@ -127,145 +149,83 @@ class YouTubeDatabase:
 			entity.tags.add(t)
 
 	@db_session
-	def access(self, method, entity_type, key = None, api_response = None, **kwargs):
-		"""
-
-		Parameters
-		----------
-			method: {'get', 'import', 'update'}
-			entity_type: {'channel', 'video', 'playlist'}
-			key: str; default None
-			api_response: ApiResponse
-			kwargs
-
-		Returns
-		-------
-
-		"""
-
-		if method in ['get', 'import']:
-			result = self.retrieveEntityFromDatabase(entity_type, key, api_response, **kwargs)
-		else:
-			result = None
-
-		if result is None and method in {'import', 'insert', 'update'}:
-			if api_response is None:
-				api_response = self.callApi(entity_type, key)
-
-			if method in ['import', 'insert']:
-
-				result = self.addEntityToDatabase(entity_type, api_response, **kwargs)
-
-			if method in ['update']:
-				raise NotImplementedError
-
-		return result
+	def exists(self, endpoint:str, key:str) -> bool:
+		entity_class = self._getEntityClass(endpoint)
+		entity_exists = entity_class.exists(resourceId = key)
+		return entity_exists
 
 
-	def _insertEntity(self, kind, **parameters):
-		entity_class = self._getEntityClass(kind)
-		try:
-			result = entity_class(**parameters)
-		except Exception as exception:
-			error_message = formatErrorMessage("in ._insertEntity", exception, kind = kind, **parameters)
-			if True:
-				print()
-				pprint(error_message)
-			raise exception
-		return result
 
 	@db_session
-	def importChannel(self, key, include_channels = False):
+	def retrieveItemFromDatabase(self, endpoint:str, key:str):
+		entity_class = self._getEntityClass(endpoint)
+		if ',' in key:
+			keys = key.split(',')
+			item = [entity_class.get(resourceId = k) for k in keys]
+		else:
+			item = entity_class.get(resourceId = key)
+		return item
+
+	@db_session
+	def get(self, endpoint: str, key: str, item_type:str='resource') -> ListResource:
 		"""
-			Imports all videos and playlists associated with a channel
+			Retrieves an item from the database, or inserts it if it's missing.
 		Parameters
 		----------
-		key
-		include_channels: bool; default False
+		endpoint: str
+		key: str
+		item_type: {'listResource', 'resource', 'entity', 'dict'}; default 'resource'
 
 		Returns
 		-------
 
 		"""
-		api_response = self.callApi('channels', key)
+		if 'youtube' not in endpoint:
+			endpoint = 'youtube#' + endpoint
 
-		channel = self.access('import', 'channel', key, api_response = api_response)
+		# Check if item exists in database.
+		item_in_database: bool = self.exists(endpoint, key)
 
-		if not api_response or channel is None:
-			print("Could not find channel '{}'".format(key))
-			return None
+		if item_in_database:
+			item = self.retrieveItemFromDatabase(endpoint, key)
 
-		print("\nImporting all items for '{}' ('{}')...\n".format(channel.name, channel.id))
+		else:
+			# If not, insert it into the database.
+			api_response = self.api.get(endpoint, key)
+			item = self.insertItemIntoDatabase(api_response)
 
-		channel_items = self.api.getChannelItems(key)
+		if item_type == 'resource' or item_type == 'listResource':
+			if not isinstance(item, list):
+				item = [item]
 
-		metrics = list()
-		progress_bar = progressbar.ProgressBar(max_value = len(channel_items))
-		for index, element in enumerate(channel_items):
-			progress_bar.update(index)
-			item = element.toStandard()
-			item_kind = item['itemKind']
-			item_id = item['itemId']
+			item = [i.toDict() for i in item]
+			item = ListResource.fromSql(item)
+			if item_type == 'resource' and len(item) == 1:
+				item = item.items[0]
+		elif item_type == 'entity':
+			if isinstance(item, list) and len(item) == 1:
+				item = item[0]
 
-			if item_kind == 'video':
-				entity = self.access('import', item_kind, item_id, channel = channel)
-			elif item_kind == 'playlist':
-				entity = self.importPlaylist(item_id, channel = channel)
-			elif item_kind == 'channel':
-				if include_channels:
-					entity = self.importChannel(item_id)
-				else:
-					continue
+		return item
+
+	def importChannel(self, channel_id:str):
+		channel_response = self.api.getChannelItems(channel_id)
+		if channel_response:
+
+			self.insertItemIntoDatabase(channel_response, show = True)
+
+	def importChannels(self, channel_ids:List[str]):
+		for channel_id in channel_ids:
+			channel_resource = self.get('youtube#channel', channel_id, item_type = 'listResource')
+			if len(channel_resource)==0:
+				print("Cannot import the channel.")
 			else:
-				message = "'{}' is not a supported entity!".format(item_kind)
-				raise ValueError(message)
-
-			item['status'] = entity is not None
-			metrics.append(item)
-
-		return metrics
-
-	@db_session
-	def importPlaylist(self, key, **kwargs):
-
-		playlist_entity = self.retrieveEntityFromDatabase('playlist', key)
-		if playlist_entity is not None:
-			return playlist_entity
-
-		playlist_response = self.callApi('playlist', key)
-		playlist_standard = playlist_response.toStandard()
-
-		if 'channel' in kwargs:
-			channel = kwargs['channel']
-		else:
-			channel_id = playlist_standard['channelId']
-			channel = self.access('import', 'channel', channel_id)
-
-		playlist_entity = self.access('import', 'playlist', api_response = playlist_response, channel = channel)
-
-		playlist_items = self.api.getPlaylistItems(playlist_entity.id)
-
-		for item in playlist_items:
-			playlist_item = self.importPlaylistItem(item, channel = channel)
-			playlist_entity.videos.add(playlist_item)
-		return playlist_entity
-
-	def importPlaylistItem(self, item, channel):
-
-		item_standard = item.toStandard()
-		item_kind = item_standard['itemKind']
-		item_id = item_standard['itemId']
-
-		result = self.access('import', item_kind, item_id, channel = channel)
-		return result
-
-	@staticmethod
-	def _cleanArguments(kind, **data):
-		return parseEntityArguments(kind, **data)
+				for channel in channel_resource:
+					channel_name = channel['channelName']
+					video_count = channel['channelVideoCount']
+					print("Importing '{}' with {} videos into the database.".format(channel_name, video_count))
+					self.importChannel(channel['channelName'])
 
 
-	@db_session 
-	def select(self, kind, expression):
-		entity_class = self._getEntityClass(kind)
-		result = entity_class.select(expression)
-		return result
+
+			self.importChannel(channel_id)

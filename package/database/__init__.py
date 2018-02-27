@@ -1,1 +1,1 @@
-from ._youtube_database import YouTubeDatabase
+from ._youtube_database import YoutubeDatabase

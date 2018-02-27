@@ -3,21 +3,24 @@ import requests
 from functools import partial
 from pprint import pprint
 from .resources import *
+from typing import List, Union
 
 pprint = partial(pprint, width = 180)
 
 from ..github import youtube_api_key
 
+ResourceType = Union[VideoResource, ChannelResource, PlaylistResource, PlaylistItemResource, SearchResource]
+
 
 class YouTube:
 	endpoints = {
-		'videos':        'https://www.googleapis.com/youtube/v3/videos',
-		'searchs':       'https://www.googleapis.com/youtube/v3/search',
-		'channels':      'https://www.googleapis.com/youtube/v3/channels',
-		'playlists':     'https://www.googleapis.com/youtube/v3/playlists',
-		'playlistItems': 'https://www.googleapis.com/youtube/v3/playlistItems',
-		'activities':    'https://www.googleapis.com/youtube/v3/activities',
-		'watch':         'http://www.youtube.com/watch'
+		'youtube#video':        'https://www.googleapis.com/youtube/v3/videos',
+		'youtube#search':       'https://www.googleapis.com/youtube/v3/search',
+		'youtube#channel':      'https://www.googleapis.com/youtube/v3/channels',
+		'youtube#playlist':     'https://www.googleapis.com/youtube/v3/playlists',
+		'youtube#playlistItem': 'https://www.googleapis.com/youtube/v3/playlistItems',
+		'youtube#activities':    'https://www.googleapis.com/youtube/v3/activities',
+		'youtube#watch':         'http://www.youtube.com/watch'
 	}
 
 	quota_costs = {
@@ -80,14 +83,15 @@ class YouTube:
 		}
 	}
 
-	def __init__(self, api_key = None):
+	def __init__(self, api_key: str = None):
 		if api_key is None:
 			self.api_key = youtube_api_key
 		else:
 			self.api_key = api_key
 
 	@staticmethod
-	def getDefaultApiParameters(endpoint, request_key, **optional_parameters):
+	def getDefaultApiParameters(endpoint: str, request_key: Union[str, List[str]], **optional_parameters) -> Dict[
+		str, str]:
 		if request_key is None and endpoint != 'search':
 			raise ValueError("Request Key = '{}', kind = '{}'".format(request_key, endpoint))
 
@@ -97,24 +101,24 @@ class YouTube:
 		request_key = ','.join(request_key)
 
 		default_parameters = {
-			'channels':      {
+			'youtube#channel':      {
 				'id':   request_key,
-				'part': "snippet,statistics,topicDetails"
+				'part': "snippet,statistics,topicDetails,contentDetails"
 			},
 
-			'playlists':     {
+			'youtube#playlist':     {
 				'id':         request_key,
 				'maxResults': '50',
 				'part':       "snippet,contentDetails"
 			},
 
-			'playlistItems': {
+			'youtube#playlistItem': {
 				'playlistId': request_key,
 				'maxResults': '50',
 				'part':       'snippet'
 			},
 
-			'videos':        {
+			'youtube#video':        {
 				'id':   request_key,
 				'part': 'snippet,contentDetails,statistics,topicDetails'
 			}
@@ -125,26 +129,28 @@ class YouTube:
 
 		return parameters
 
-	def calculateQuota(self, endpoint, parts):
+	def calculateQuota(self, endpoint: str, parts: List[str]):
 		base_cost = 1
 
 		method_costs = self.quota_costs[endpoint + '.list']
 		base_cost += sum([v for k, v in method_costs if k in parts])
 		return base_cost
 
-	def getChannelItems(self, channel_id, **kwargs):
+	def getChannelItems(self, channel_id: str, **kwargs) -> ListResource:
 		parameters = {
 			'id':   channel_id,
 			'part': 'contentDetails'
 		}
-		channel_response = self.get('channels', channel_id, **parameters)
+		channel_response = self.get('youtube#channel', channel_id, **parameters)
+		if len(channel_response) == 0:
+			return None
 
-		upload_playlist = channel_response['channelUploadPlaylist']
+		upload_playlist = channel_response[0]['channelUploadPlaylist']
 		channel_items = self.get('playlistItems', upload_playlist, part = 'id,snippet', **kwargs)
 
 		return channel_items
 
-	def getVideos(self, ids):
+	def getVideos(self, ids: Union[str, int]) -> ListResource:
 		if not isinstance(ids[0], str):
 			ids = [i.item_id for i in ids]
 		max_page_length = 50
@@ -165,7 +171,7 @@ class YouTube:
 			end_index += max_page_length
 		return response
 
-	def request(self, endpoint, key, **parameters):
+	def request(self, endpoint: str, key: str, **parameters) -> Dict:
 		"""
 			Sends a raw request to the Youtube Api.
 		Parameters
@@ -177,8 +183,8 @@ class YouTube:
 		-------
 
 		"""
-		if not endpoint.endswith('s'):
-			endpoint += 's'
+		if 'youtube' not in endpoint:
+			endpoint = 'youtube#' + endpoint
 
 		parameters = self.getDefaultApiParameters(endpoint, key, **parameters)
 		parameters['key'] = self.api_key
@@ -192,12 +198,12 @@ class YouTube:
 
 		return response
 
-	def get(self, endpoint, key, **parameters):
+	def get(self, endpoint: str, key: str, **parameters) -> ListResource:
 		"""
 
 		Parameters
 		----------
-		endpoint: {'channels', 'playlists', 'videos'}
+		endpoint: str
 		key: str
 
 		Returns
@@ -205,6 +211,10 @@ class YouTube:
 			Resource
 
 		"""
+		if endpoint.endswith('s'):
+			endpoint = endpoint[:-1]
+		if '#' not in endpoint:
+			endpoint = 'youtube#' + endpoint
 
 		response = self.request(endpoint, key, **parameters)
 
@@ -216,8 +226,6 @@ class YouTube:
 		if response_resource.next_page_token:
 			next_page_response = self.get(endpoint, key, pageToken = response_resource.next_page_token)
 			response_resource.items += next_page_response.items
-		if len(response_resource.items) == 1:
-			response_resource = response_resource.items[0]
 		return response_resource
 
 	def search(self, **parameters):

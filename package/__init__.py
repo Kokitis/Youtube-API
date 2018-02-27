@@ -1,3 +1,3 @@
 from .api import *
-from .database import YouTubeDatabase
+from .database import YoutubeDatabase
 from . import github
