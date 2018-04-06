@@ -39,6 +39,7 @@ def importEntities(db: Database) -> Dict:
 
 			return data
 
+
 	class Channel(db.Entity):
 		entity_type = 'youtube#channel'
 		resourceId = PrimaryKey(str)

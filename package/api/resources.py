@@ -152,7 +152,7 @@ class ChannelResource:
 
 	def __str__(self):
 		channel_name = self.snippet['channelName']
-		string = "ChannelResource('{}')".format(channel_name)
+		string = "ChannelResource('{}', '{}')".format(self.resource_id, channel_name)
 		return string
 
 	def __getitem__(self, item: str):
@@ -219,17 +219,21 @@ class ChannelResource:
 
 		data = self.data
 		if to_sql:
-			allowed_keys = ['resourceId','resourceType', 'itemId', 'itemType', 'channelId', 'channelName', 'channelDescription',
-							'channelUrl', 'channelLanguage', 'channelUploadPlaylist', 'channelViewCount', 'channelCommentCount',
-							'channelSubscriberCount', 'channelVideoCount']
+			allowed_keys = [
+				'resourceId','resourceType', 'itemId', 'itemType', 'channelId', 'channelName', 'channelDescription',
+				'channelUrl', 'channelLanguage', 'channelUploadPlaylist', 'channelViewCount', 'channelCommentCount',
+				'channelSubscriberCount', 'channelVideoCount'
+			]
 			data = {k:v for k,v in data.items() if k in allowed_keys}
 		return data
 
 	@classmethod
 	def fromSql(cls, response:Dict)->'ChannelResource':
-		expected_keys = ['channelName', 'channelDescription', 'channelUrl', 'channelLanguage', 'channelCountry',
-						 'channelUploadPlaylist', 'channelViewCount', 'channelCommentCount', 'channelSubscriberCount',
-						 'channelVideoCount', 'resourceId']
+		expected_keys = [
+			'channelName', 'channelDescription', 'channelUrl', 'channelLanguage', 'channelCountry',
+			'channelUploadPlaylist', 'channelViewCount', 'channelCommentCount', 'channelSubscriberCount',
+			'channelVideoCount', 'resourceId'
+		]
 		checkKeys(expected_keys,response.keys())
 		snippet = {
 			'title':           response['channelName'],
@@ -327,15 +331,20 @@ class PlaylistResource:
 	def toDict(self, to_sql:bool = False)->Dict:
 
 		data = self.data
-		allowed_keys = ['resourceId','resourceType', 'itemId', 'itemType', 'playlistDate', 'playlistName', 'playlistTags', 'playlistDescription', 'playlistLanguage', 'channelId']
+		allowed_keys = [
+			'resourceId','resourceType', 'itemId', 'itemType', 'playlistDate', 'playlistName', 'playlistTags',
+			'playlistDescription', 'playlistLanguage', 'channelId'
+		]
 		if to_sql:
 			data = {k:v for k,v in data.items() if k in allowed_keys}
 		return data
 
 	@classmethod
 	def fromSql(cls, response:Dict)->'PlaylistResource':
-		expected_keys = ['channelId', 'channelName', 'playlistName', 'playlistDescription', 'playlistTags',
-						 'playlistLanguage', 'playlistDate', 'resourceId', 'playlistItemCount']
+		expected_keys = [
+			'channelId', 'channelName', 'playlistName', 'playlistDescription', 'playlistTags',
+			'playlistLanguage', 'playlistDate', 'resourceId', 'playlistItemCount'
+		]
 		checkKeys(expected_keys, response.keys())
 		snippet = {
 			'channelId':       response['channelId'],
@@ -422,15 +431,20 @@ class PlaylistItemResource:
 	def toDict(self, to_sql:bool = False):
 		data = self.data
 
-		allowed_keys = ['playlistId', 'resourceId', 'resourceType', 'itemId', 'itemType', 'playlistItemDate', 'playlistItemName', 'playlistItemDescription', 'playlistItemPosition']
+		allowed_keys = [
+			'playlistId', 'resourceId', 'resourceType', 'itemId', 'itemType', 'playlistItemDate',
+			'playlistItemName', 'playlistItemDescription', 'playlistItemPosition'
+		]
 		if to_sql:
 			data = {k:v for k,v in data.items() if k in allowed_keys}
 		return data
 
 	@classmethod
 	def fromSql(cls, response:Dict)->'PlaylistItemResource':
-		expected_keys = ['channelId', 'playlistItemName', 'playlistItemDescription', 'channelName', 'playlistId',
-						 'playlistItemPosition', 'playlistItemDate', 'resourceId', 'itemId', 'itemType']
+		expected_keys = [
+			'channelId', 'playlistItemName', 'playlistItemDescription', 'channelName', 'playlistId',
+			'playlistItemPosition', 'playlistItemDate', 'resourceId', 'itemId', 'itemType'
+		]
 		checkKeys(expected_keys,response.keys())
 		snippet = {
 			'channelId':    response['channelId'],
@@ -521,7 +535,7 @@ class VideoResource:
 	def __str__(self):
 		video_name = self.data['videoName']
 		channel_name = self.data['channelName']
-		string = "VideoResource('{}', '{}')".format(channel_name, video_name)
+		string = "VideoResource('{}', '{}', '{}')".format(self.resource_id, channel_name, video_name)
 		return string
 
 	def __getitem__(self, item):
@@ -636,19 +650,23 @@ class VideoResource:
 		data = self.data
 		if to_sql:
 
-			allowed_keys = ['resourceId','resourceType', 'itemId','itemType', 'videoName', 'videoViewCount', 'videoLikeCount', 'videoDislikeCount',
-							'videoCommentCount', 'videoFavoriteCount', 'videoDescription', 'videoCaption', 'videoLanguage',
-							'videoAudioLanguage', 'videoCategoryId', 'videoDate', 'videoDuration', 'videoDefinition', 'videoDimension',
-							'channelId', 'videoTags']
+			allowed_keys = [
+				'resourceId','resourceType', 'itemId','itemType', 'videoName', 'videoViewCount', 'videoLikeCount', 'videoDislikeCount',
+				'videoCommentCount', 'videoFavoriteCount', 'videoDescription', 'videoCaption', 'videoLanguage',
+				'videoAudioLanguage', 'videoCategoryId', 'videoDate', 'videoDuration', 'videoDefinition', 'videoDimension',
+				'channelId', 'videoTags'
+			]
 			data = {k:v for k,v in data.items() if k in allowed_keys}
 		return data
 
 	@classmethod
 	def fromSql(cls, response: Dict) -> 'VideoResource':
-		expected_keys = ['videoName', 'videoDate', 'channelName', 'channelId', 'videoDescription', 'videoCategoryId',
-						 'videoLanguage', 'videoAudioLanguage', 'videoTags', 'videoDuration', 'videoDimension',
-						 'videoDefinition', 'videoCaption', 'videoViewCount', 'videoCommentCount', 'videoDislikeCount',
-						 'videoFavoriteCount', 'resourceId']
+		expected_keys = [
+			'videoName', 'videoDate', 'channelName', 'channelId', 'videoDescription', 'videoCategoryId',
+			'videoLanguage', 'videoAudioLanguage', 'videoTags', 'videoDuration', 'videoDimension',
+			'videoDefinition', 'videoCaption', 'videoViewCount', 'videoCommentCount', 'videoDislikeCount',
+			'videoFavoriteCount', 'resourceId'
+		]
 		checkKeys(expected_keys,response.keys())
 		snippet = {
 			'title':                response['videoName'],
