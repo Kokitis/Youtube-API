@@ -1,4 +1,4 @@
-from package.github import timetools
+from youtubeapi.github import timetools
 from pprint import pprint
 from typing import Dict, List,Iterable
 import json

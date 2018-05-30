@@ -14,6 +14,6 @@ from pytools import tabletools, timetools
 # noinspection PyUnresolvedReferences
 from github_data import youtube_subscriptions, youtube_api_key
 
-# Common package settings
+# Common youtubeapi settings
 
 DATA_FOLDER:str = os.path.join(os.path.dirname(__file__), "data")

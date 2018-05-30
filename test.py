@@ -1,4 +1,4 @@
-from package import YouTubeDatabase, github, widgets
+from youtubeapi import YouTubeDatabase, github, widgets
 
 import os
 
