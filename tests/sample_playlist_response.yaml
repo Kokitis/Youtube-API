@@ -1,0 +1,26 @@
+etag: '"XI7nbFXulYBIpL0ayR_gDh3eu1k/a4cHivXpGzZoEFtw_ayvm_y4KBk"'
+items:
+- contentDetails: {itemCount: 29}
+  etag: '"XI7nbFXulYBIpL0ayR_gDh3eu1k/5ht02JplIcTbfMF_Rmo8nzCUPI0"'
+  id: PLbIc1971kgPCjKm56j_tNsetBn3PA5GaY
+  kind: youtube#playlist
+  snippet:
+    channelId: UCboMX_UNgaPBsUOIgasn3-Q
+    channelTitle: Funhaus
+    description: ''
+    localized: {description: '', title: Google Trends Show}
+    publishedAt: '2016-06-21T21:45:17.000Z'
+    thumbnails:
+      default: {height: 90, url: 'https://i.ytimg.com/vi/t6LlLRcIHAM/default.jpg',
+        width: 120}
+      high: {height: 360, url: 'https://i.ytimg.com/vi/t6LlLRcIHAM/hqdefault.jpg',
+        width: 480}
+      maxres: {height: 720, url: 'https://i.ytimg.com/vi/t6LlLRcIHAM/maxresdefault.jpg',
+        width: 1280}
+      medium: {height: 180, url: 'https://i.ytimg.com/vi/t6LlLRcIHAM/mqdefault.jpg',
+        width: 320}
+      standard: {height: 480, url: 'https://i.ytimg.com/vi/t6LlLRcIHAM/sddefault.jpg',
+        width: 640}
+    title: Google Trends Show
+kind: youtube#playlistListResponse
+pageInfo: {resultsPerPage: 50, totalResults: 1}

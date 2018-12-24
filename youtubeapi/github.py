@@ -1,19 +1,6 @@
-import sys
-import os 
-
-github_folder = os.path.join(os.getenv('USERPROFILE'), 'Documents', 'Github')
-
-sys.path.append(github_folder)
-
-# noinspection PyUnresolvedReferences
-from pytools import tabletools, timetools
-#import pytools.tabletools as tabletools
-
-#import pytools.timetools as timetools
-#import pytools.tabletools as tabletools
-# noinspection PyUnresolvedReferences
-from github_data import youtube_subscriptions, youtube_api_key
-
-# Common youtubeapi settings
-
-DATA_FOLDER:str = os.path.join(os.path.dirname(__file__), "data")
+import yaml
+from pathlib import Path
+github_folder = Path.home() / 'Documents' / 'GitHub'
+DATA_FOLDER:str = Path(__file__).with_name("data")
+api_parameters = yaml.load((github_folder / 'github_data.yaml').read_text())
+youtube_api_key = api_parameters['youtubeKey']

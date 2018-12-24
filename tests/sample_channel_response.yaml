@@ -1,0 +1,49 @@
+etag: '"XI7nbFXulYBIpL0ayR_gDh3eu1k/6Eh30cPlQXH8iVAHZfYuQoy-L1c"'
+items:
+- contentDetails:
+    relatedPlaylists: {uploads: UUboMX_UNgaPBsUOIgasn3-Q, watchHistory: HL, watchLater: WL}
+  etag: '"XI7nbFXulYBIpL0ayR_gDh3eu1k/nPsaL_9pYuM40Hcalx3tySvmNXU"'
+  id: UCboMX_UNgaPBsUOIgasn3-Q
+  kind: youtube#channel
+  snippet:
+    customUrl: funhaus
+    description: "Funhaus is a Rooster Teeth thing. \n\nFunhaus is a bunch of people\
+      \ who play games. Does that mean we only play games? No - we've also got podcasts\
+      \ and fan Qs&As and game shows and...well, you get the picture.\n\nWe're Adam\
+      \ Kovic, Bruce Greene, James Willems, Lawrence Sonntag, Elyse Willems, Alanah\
+      \ Pearce, Matt Peake, Omar de Armas, Dan Schneider, Don Casanova, Jacob Fullerton,\
+      \ Adam Brouillard, Jon Smith, and John Holland. We'll play everything from GTA\
+      \ to the crappiest games we can find. We'll also be doing live streams, fan\
+      \ events, and collaborations with any Rooster Teeth/YouTube friends and colleagues\
+      \ who wouldn't be embarrassed to be seen with us.\n\nSubscribe to Rooster Teeth\
+      \ FIRST to see all of our videos up to one week early as well as lots of content\
+      \ that isn't on our YouTube channel: http://bit.ly/rtfirst and type in code\
+      \ \"FUNHAUS\""
+    localized: {description: "Funhaus is a Rooster Teeth thing. \n\nFunhaus is a bunch\
+        \ of people who play games. Does that mean we only play games? No - we've\
+        \ also got podcasts and fan Qs&As and game shows and...well, you get the picture.\n\
+        \nWe're Adam Kovic, Bruce Greene, James Willems, Lawrence Sonntag, Elyse Willems,\
+        \ Alanah Pearce, Matt Peake, Omar de Armas, Dan Schneider, Don Casanova, Jacob\
+        \ Fullerton, Adam Brouillard, Jon Smith, and John Holland. We'll play everything\
+        \ from GTA to the crappiest games we can find. We'll also be doing live streams,\
+        \ fan events, and collaborations with any Rooster Teeth/YouTube friends and\
+        \ colleagues who wouldn't be embarrassed to be seen with us.\n\nSubscribe\
+        \ to Rooster Teeth FIRST to see all of our videos up to one week early as\
+        \ well as lots of content that isn't on our YouTube channel: http://bit.ly/rtfirst\
+        \ and type in code \"FUNHAUS\"", title: Funhaus}
+    publishedAt: '2015-02-05T21:01:53.000Z'
+    thumbnails:
+      default: {height: 88, url: 'https://yt3.ggpht.com/a-/AAuE7mBEcvG7rLYLvXtVkytB3a62Cg-rbVJ-Xg_VKA=s88-mo-c-c0xffffffff-rj-k-no',
+        width: 88}
+      high: {height: 800, url: 'https://yt3.ggpht.com/a-/AAuE7mBEcvG7rLYLvXtVkytB3a62Cg-rbVJ-Xg_VKA=s800-mo-c-c0xffffffff-rj-k-no',
+        width: 800}
+      medium: {height: 240, url: 'https://yt3.ggpht.com/a-/AAuE7mBEcvG7rLYLvXtVkytB3a62Cg-rbVJ-Xg_VKA=s240-mo-c-c0xffffffff-rj-k-no',
+        width: 240}
+    title: Funhaus
+  statistics: {commentCount: '0', hiddenSubscriberCount: false, subscriberCount: '1524742',
+    videoCount: '1971', viewCount: '957751743'}
+  topicDetails:
+    topicCategories: ['https://en.wikipedia.org/wiki/Entertainment', 'https://en.wikipedia.org/wiki/Video_game_culture']
+    topicIds: [/m/0bzvm2, /m/0bzvm2, /m/02jjt]
+kind: youtube#channelListResponse
+pageInfo: {resultsPerPage: 1, totalResults: 1}

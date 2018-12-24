@@ -1,26 +1,54 @@
-from youtubeapi import YouTubeDatabase, github, widgets
+if __name__ == "__main__":
+	import requests
+	import yaml
+	from pathlib import Path
+	import json
+	from pprint import pprint
+	request_key = "PLbIc1971kgPCjKm56j_tNsetBn3PA5GaY"
+	endpoints = {
+		'youtube#video':        'https://www.googleapis.com/youtube/v3/videos',
+		'youtube#search':       'https://www.googleapis.com/youtube/v3/search',
+		'youtube#channel':      'https://www.googleapis.com/youtube/v3/channels',
+		'youtube#playlist':     'https://www.googleapis.com/youtube/v3/playlists',
+		'youtube#playlistItem': 'https://www.googleapis.com/youtube/v3/playlistItems',
+		'youtube#activities':    'https://www.googleapis.com/youtube/v3/activities',
+		'youtube#watch':         'http://www.youtube.com/watch'
+	}
 
-import os
+	default_parameters= {
+		'youtube#channel':      {
+			'id':   request_key,
+			'part': "snippet,statistics,topicDetails,contentDetails"
+		},
 
-subscriptions = github.youtube_subscriptions
+		'youtube#playlist':     {
+			'id':         request_key,
+			'maxResults': '50',
+			'part':       "snippet,contentDetails"
+		},
 
-filename = os.path.join(os.path.dirname(__file__), "RT_video_database.sqlite")
-test_filename = os.path.join(os.path.dirname(__file__), 'test_database.sqlite')
-if os.path.exists(test_filename):
-	os.remove(test_filename)
+		'youtube#playlistItem': {
+			'playlistId': request_key,
+			'maxResults': '50',
+			'part':       'snippet'
+		},
 
-if __name__ == '__main__':
-	#print("Running Tests...")
-	test_video = "FrLgREKD4kk"
-	test_channel = 'UCkxctb0jr8vwa4Do6c6su0Q'
-	test_playlist = "PL1cXh4tWqmsGfdkQofe9pEbHDE7cQyJH2"
-	youtube = YouTubeDatabase(filename = test_filename)
+		'youtube#video':        {
+			'id':   request_key,
+			'part': 'snippet,contentDetails,statistics,topicDetails'
+		}
+	}
 
-	#youtube.importChannel(test_channel)
-	#youtube.importPlaylist(test_playlist)
+	github_data = Path.home() / "Documents" / "GitHub" /"github_data.yaml"
+	data = yaml.load(github_data.read_text())
 
-	
-	if True:
-		#subscriptions = {k:v for k,v in subscriptions.items() if v == test_channel}
-		widgets.importSubscriptions(youtube, subscriptions, start_index = 0)
+	kind = "youtube#playlist"
+	parameters = default_parameters[kind]
+	endpoint = endpoints[kind]
+	parameters['key'] = data['youtubeKey']
+	response = requests.get(endpoint, parameters)
+	response = response.json()
+
+	Path("sample_playlist_response.json").write_text(json.dumps(response))
+	Path("sample_playlist_response.yaml").write_text(yaml.dump(response))
 

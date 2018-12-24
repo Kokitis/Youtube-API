@@ -1,0 +1,85 @@
+etag: '"XI7nbFXulYBIpL0ayR_gDh3eu1k/9MM4HXxi_raQsOCZxxaD_oyiqXc"'
+items:
+- contentDetails: {caption: 'false', definition: hd, dimension: 2d, duration: PT20M,
+    licensedContent: true, projection: rectangular}
+  etag: '"XI7nbFXulYBIpL0ayR_gDh3eu1k/p6dKxjGCDVTWV00RM7UfjpfauEs"'
+  id: PdQsG6hmxZw
+  kind: youtube#video
+  snippet:
+    categoryId: '20'
+    channelId: UCboMX_UNgaPBsUOIgasn3-Q
+    channelTitle: Funhaus
+    defaultAudioLanguage: en
+    description: 'Thursday Boots doesn''t do sales or discounts, but you can head
+      on over to http://thursdayboots.com/trends to get free shipping and returns
+      on your order.
+
+      Get a FREE stock like Apple, Ford, or Sprint to help build your portfolio at
+      http://trends.robinhood.com
+
+
+      I''m not really a fan of Christmas either, but I think that''s because my mom
+      used to beat me with an advent calendar.
+
+
+      http://twitter.com/sirlarr
+
+      http://twitter.com/adamkovic
+
+      https://twitter.com/Charalanahzard
+
+      https://twitter.com/elysewillems
+
+      https://twitter.com/brucegreene
+
+
+      Tshirts n stuff: https://store.roosterteeth.com/collections/funhaus'
+    liveBroadcastContent: none
+    localized: {description: 'Thursday Boots doesn''t do sales or discounts, but you
+        can head on over to http://thursdayboots.com/trends to get free shipping and
+        returns on your order.
+
+        Get a FREE stock like Apple, Ford, or Sprint to help build your portfolio
+        at http://trends.robinhood.com
+
+
+        I''m not really a fan of Christmas either, but I think that''s because my
+        mom used to beat me with an advent calendar.
+
+
+        http://twitter.com/sirlarr
+
+        http://twitter.com/adamkovic
+
+        https://twitter.com/Charalanahzard
+
+        https://twitter.com/elysewillems
+
+        https://twitter.com/brucegreene
+
+
+        Tshirts n stuff: https://store.roosterteeth.com/collections/funhaus', title: 'Christmas
+        Challenge: Elyse Hates Christmas!? - Google Trends'}
+    publishedAt: '2018-12-22T14:00:03.000Z'
+    tags: [Elyse, hates, christmas, google trends, hollidays, santa, krampus, funhaus,
+      rooster teeth, lawrence sonntag, alanah pearce, adam kovic, bruce greene, elyse
+        willems]
+    thumbnails:
+      default: {height: 90, url: 'https://i.ytimg.com/vi/PdQsG6hmxZw/default.jpg',
+        width: 120}
+      high: {height: 360, url: 'https://i.ytimg.com/vi/PdQsG6hmxZw/hqdefault.jpg',
+        width: 480}
+      maxres: {height: 720, url: 'https://i.ytimg.com/vi/PdQsG6hmxZw/maxresdefault.jpg',
+        width: 1280}
+      medium: {height: 180, url: 'https://i.ytimg.com/vi/PdQsG6hmxZw/mqdefault.jpg',
+        width: 320}
+      standard: {height: 480, url: 'https://i.ytimg.com/vi/PdQsG6hmxZw/sddefault.jpg',
+        width: 640}
+    title: 'Christmas Challenge: Elyse Hates Christmas!? - Google Trends'
+  statistics: {commentCount: '501', dislikeCount: '228', favoriteCount: '0', likeCount: '4458',
+    viewCount: '108998'}
+  topicDetails:
+    relevantTopicIds: [/m/02jjt, /m/02jjt]
+    topicCategories: ['https://en.wikipedia.org/wiki/Entertainment']
+kind: youtube#videoListResponse
+pageInfo: {resultsPerPage: 1, totalResults: 1}
