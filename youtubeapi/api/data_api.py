@@ -1,7 +1,8 @@
 import requests
-from typing import NamedTuple, Optional
+from typing import NamedTuple, Optional, Tuple
 from youtubeapi.github import youtube_api_key
 import tqdm
+
 try:
 	from .resources import *
 except ModuleNotFoundError:
@@ -22,7 +23,6 @@ class ResourceTypes(NamedTuple):
 	playlist: str = "youtube#playlist"
 	playlist_item: str = "youtube#playlistItem"
 	video: str = "youtube#video"
-
 
 
 resource_types = ResourceTypes()
@@ -76,10 +76,12 @@ def request(resource_type: str, key: str, page_token: Optional[str] = None) -> D
 	response['statusCode'] = status_code
 	return response
 
-def validate_response(response:Dict[str,str]):
+
+def validate_response(response: Dict[str, str]):
 	if 'error' in response:
 		pprint(response['error'])
 		raise ValueError
+
 
 def get(resource_type: str, key: str) -> Union[Resource, List[Resource]]:
 	""" Sends a request to the api and returns the parsed resource."""
@@ -95,7 +97,6 @@ def get(resource_type: str, key: str) -> Union[Resource, List[Resource]]:
 		else:
 			break
 
-
 	if len(resource_items) == 1:
 		result = resource_items[0]
 	else:
@@ -103,15 +104,15 @@ def get(resource_type: str, key: str) -> Union[Resource, List[Resource]]:
 	return result
 
 
-def request_channel_videos(key: str) -> List[VideoResource]:
+def request_channel_videos(key: str) -> Tuple[ChannelResource, PlaylistResource,List[VideoResource]]:
 	""" Returns a list of all videos associated with a specific channel."""
 	channel = get(resource_types.channel, key)
 	upload_playlist_key = channel.uploads
-	channel_videos = request_playlist_videos(upload_playlist_key)
-	return channel_videos
+	upload_playlist, channel_videos = request_playlist_videos(upload_playlist_key)
+	return channel, upload_playlist, channel_videos
 
 
-def request_playlist_videos(key: str) -> List[VideoResource]:
+def request_playlist_videos(key: str) -> Tuple[PlaylistResource,List[VideoResource]]:
 	""" Returns a list of all videos associated with a playlist."""
 	playlist = get(resource_types.playlist, key)
 	playlist_items = get(resource_types.playlist_item, playlist.itemId)
@@ -120,7 +121,7 @@ def request_playlist_videos(key: str) -> List[VideoResource]:
 	for playlist_item in playlist_items:
 		video = get(resource_types.video, playlist_item.itemId)
 		playlist_videos.append(video)
-	return playlist_videos
+	return playlist, playlist_videos
 
 
 def search():
@@ -134,7 +135,5 @@ if __name__ == "__main__":
 	_playlist_key = "PLbIc1971kgPCFlvfYMbZ3umbad61v4fIq"
 	_key = "UCjdQaSJCYS4o2eG93MvIwqg"
 	_result = request_channel_videos(_key)
-	#_result = request(resource_types.playlist_item, "UUboMX_UNgaPBsUOIgasn3-Q")
+	# _result = request(resource_types.playlist_item, "UUboMX_UNgaPBsUOIgasn3-Q")
 	pprint(_result)
-
-
