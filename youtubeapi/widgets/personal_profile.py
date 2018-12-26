@@ -1,48 +1,29 @@
 """
 	Widgets pertaining to common operations to perform on the personal channel.
 """
-import os
-import pandas
-
-def importSubscriptions(youtube, subscriptions, whitelist = None, start_index = 0):
+from typing import Dict
+from pathlib import Path
+from pprint import pprint
+from bs4 import BeautifulSoup
+import re
+def import_subscriptions(path: Path)->Dict[str,str]:
 	"""
-		Imports all subscriptions.
+		Imports all subscriptions using the html page when using ImprovedTube.
 	Parameters
 	----------
-	youtube: YoutubeDatabase
-	subscriptions: dict
-	whitelist: list
-		overrides 'subscriptions'
-	start_index: int; default 0
-		The index to start at.
-
-	Returns
-	-------
-
+	path: Path
+		The html file.
 	"""
-	if whitelist is None:
-		whitelist = list(subscriptions.keys())
-	all_metrics = list()
-	database_name = os.path.basename(youtube.filename)
-	metrics_filename = os.path.join(os.path.dirname(youtube.filename), database_name + '_import_metrics.xlsx')
+	pattern = "href=\"/channel/(?P<id>.+)\"[\s]+title=\"(?P<title>.+)\"[\s]"
+	regex = re.compile(pattern)
+	contents = path.read_text()
+	soup = BeautifulSoup(contents, 'lxml')
 
-	for index, element in enumerate(sorted(subscriptions.items())):
-		if index < start_index:
-			continue
-		channel_name, channel_id = element
-		if channel_name not in whitelist:
-			continue
-		index += 1
-		print("\n{} of {}".format(index, len(subscriptions)))
-		metrics = youtube.importChannel(channel_id)
-		if metrics is None:
-			metrics = [{
-				'itemKind':        'channel',
-				'itemId':          channel_id,
-				'itemName':        channel_name,
-				'itemChannelName': channel_name,
-				'itemChannelId':   channel_id
-			}]
-		all_metrics += metrics
-		metrics_df = pandas.DataFrame(all_metrics)
-		metrics_df.to_excel(metrics_filename)
+	result = soup.find_all(regex)
+	result = regex.findall(contents)
+	pprint(result)
+
+
+if __name__ == "__main__":
+	filename = Path.home() / "Documents" / "GitHub" / "Subscriptions - YouTube.html"
+	import_subscriptions(filename)
